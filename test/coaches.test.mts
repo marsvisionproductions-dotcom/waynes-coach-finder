@@ -83,3 +83,12 @@ test('title beats description for make; location found inside description', () =
   const g = normalize({ source: 'fb', external_id: 'g1', url: 'x', title: 'Marathon coach', description: '2008 Prevost H3-45 Marathon conversion, Ocala FL 34470' });
   assert.equal(g.make, 'Prevost'); assert.equal(g.conv_year, 2008); assert.equal(g.city, 'Ocala');
 });
+
+test('area code fallback, contact-name capture, in-City-ST, market summary skipped', () => {
+  const n = normalize({ source: 'prevoststuff', external_id: 'p', url: 'x', title: '2007 Prevost Liberty H3-45 Double Slide', description: 'The Coach Has Just Over 100k Miles On It. For Additional Information Please Contact :\nAnthony at 615-495-6843 or Email' });
+  assert.equal(n.state, 'TN'); assert.equal(n.seller_name, 'Anthony'); assert.equal(n.contact_phone, '(615) 495-6843'); assert.equal(n.mileage, 100000); assert.ok(n.dist_mi! > 500);
+  const f = normalize({ source: 'prevostrvforsale', external_id: 'f', url: 'x', title: '1998 Prevost Marathon XL Coach in Antioch, TN', description: 'Take a look…' });
+  assert.equal(f.city, 'Antioch'); assert.equal(f.state, 'TN');
+  const m = normalize({ source: 'prevostrvforsale', external_id: 'm', url: 'x', title: 'Market Summary for September 7th 2026', description: 'New listings increased from 17 to 25 this week, Prevost XL Coach in Antioch, TN' });
+  assert.equal(isRelevant(m), false);
+});

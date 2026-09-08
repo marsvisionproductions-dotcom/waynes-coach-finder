@@ -60,7 +60,8 @@ export function extractFromHtml(url: string, html: string, hints: Partial<RawLis
     }
   }
   // Body text for phone / mileage / slides / seller-type detection (trimmed so we don't store a whole site nav)
-  const body = stripTags(html.replace(/<head[\s\S]*?<\/head>|<nav[\s\S]*?<\/nav>|<header[\s\S]*?<\/header>|<footer[\s\S]*?<\/footer>/gi, '')).slice(0, 6000);
+  let body = stripTags(html.replace(/<head[\s\S]*?<\/head>|<nav[\s\S]*?<\/nav>|<header[\s\S]*?<\/header>|<footer[\s\S]*?<\/footer>/gi, '')).slice(0, 6000);
+  { const lines = body.split('\n'); const i = lines.findIndex(l => /\b(19|20)\d{2}\b/.test(l)); if (i > 0 && i < 12) body = lines.slice(i).join('\n'); }   // drop site header lines above the listing
   const locMeta = meta(html, 'og:locality') || meta(html, 'place:location') || undefined;
   const locFromText = body.match(/(?:^|\s)(?:Location|Located in|Located)\s*:?\s*([A-Za-z .]+,\s*[A-Z]{2})\b/)?.[1];
   const externalId = hints.external_id || (url.match(/(\d{6,})/)?.[1] ? `${source}:${url.match(/(\d{6,})/)![1]}` : url);

@@ -8,14 +8,14 @@ import { distanceFromHome } from './geo.mts';
 
 const OPEN_SOURCES = ['prevoststuff', 'prevostrvforsale', 'newellgurus', 'foreforums', 'capture', 'rvusa'];
 
-export async function enrichMissing(opts: { max?: number } = {}): Promise<{ tried: number; enriched: number; errors: string[] }> {
+export async function enrichMissing(opts: { max?: number; force?: boolean } = {}): Promise<{ tried: number; enriched: number; errors: string[] }> {
   await initDb();
   const sql = db().sql;
   const rows = await sql`
     SELECT l.id, l.title_raw, l.seller_type, l.seller_name, s.url, s.source FROM listings l
     JOIN LATERAL (SELECT url, source FROM listing_sources s WHERE s.listing_id = l.id AND s.source = ANY(${OPEN_SOURCES}) ORDER BY s.seen_at LIMIT 1) s ON true
-    WHERE l.stage = 'new' AND l.seller_type <> 'dealer' AND (l.thumb_url IS NULL OR l.contact_phone IS NULL OR l.state IS NULL)
-      AND NOT EXISTS (SELECT 1 FROM events e WHERE e.listing_id = l.id AND e.body = 'Details fetched from the listing page')
+    WHERE l.stage = 'new' AND l.seller_type <> 'dealer' AND (${opts.force ?? false} OR l.thumb_url IS NULL OR l.contact_phone IS NULL OR l.state IS NULL)
+      AND (${opts.force ?? false} OR NOT EXISTS (SELECT 1 FROM events e WHERE e.listing_id = l.id AND e.body = 'Details fetched from the listing page'))
     ORDER BY l.score DESC NULLS LAST, l.id LIMIT ${opts.max ?? 40}`;
   const out = { tried: 0, enriched: 0, errors: [] as string[] };
   for (const r of rows) {
@@ -34,12 +34,13 @@ export async function enrichMissing(opts: { max?: number } = {}): Promise<{ trie
           city = COALESCE(city, ${n.city ?? null}), state = COALESCE(state, ${n.state ?? null}), dist_mi = COALESCE(dist_mi, ${dist ?? null}),
           mileage = COALESCE(mileage, ${n.mileage ?? null}), slides = COALESCE(slides, ${n.slides ?? null}), price = COALESCE(price, ${n.price ?? null}),
           model = COALESCE(model, ${n.model ?? null}), shell_year = COALESCE(shell_year, ${n.shell_year ?? null}),
-          description = CASE WHEN length(COALESCE(description,'')) < length(${n.description ?? ''}) THEN ${n.description ?? null} ELSE description END,
+          description = CASE WHEN ${n.description ?? ''} <> '' AND (description IS NULL OR description LIKE '%Largest Selection of Prevost%' OR length(description) < length(${n.description ?? ''})) THEN ${n.description ?? null} ELSE description END,
+          seller_name = COALESCE(seller_name, ${n.seller_name ?? null}),
           posted_at = COALESCE(posted_at, ${n.posted_at ?? null}),
           seller_type = CASE WHEN seller_type = 'unknown' THEN ${n.seller_type} ELSE seller_type END,
           updated_at = now()
         WHERE id = ${r.id}`;
-      await mark(r.id, 'Details fetched from the listing page');
+      if (!opts.force) await mark(r.id, 'Details fetched from the listing page');
       out.enriched++;
     } catch (e: any) { out.errors.push(`${r.url} ${e.message}`); }
   }

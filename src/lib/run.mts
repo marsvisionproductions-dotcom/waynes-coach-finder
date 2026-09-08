@@ -45,7 +45,7 @@ export async function runAll(opts: { trigger: string; siteUrl: string; facebook?
     } catch (e: any) { summary.sources.fb = { error: e.message }; summary.errors.push(`fb: ${e.message}`); }
   }
 
-  if (want('enrich')) { try { summary.sources.enrich = await enrichMissing({ max: 40 }); } catch (e: any) { summary.sources.enrich = { error: e.message }; summary.errors.push(`enrich: ${e.message}`); } }
+  if (want('enrich')) { try { summary.sources.enrich = await enrichMissing({ max: 60 }); } catch (e: any) { summary.sources.enrich = { error: e.message }; summary.errors.push(`enrich: ${e.message}`); } }
 
   try { summary.gone = await sweepGone(3); } catch (e: any) { summary.errors.push(`sweep: ${e.message}`); }
 

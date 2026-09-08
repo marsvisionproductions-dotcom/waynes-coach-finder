@@ -146,7 +146,7 @@ export default async (req: Request, _ctx: Context) => {
         AND EXISTS (SELECT 1 FROM listing_sources s WHERE s.listing_id = l.id AND s.source = ${source}) RETURNING l.id`;
       return json({ deleted: rows.length });
     }
-    if (path === '/admin/enrich' && req.method === 'POST') { if (!secretOk(req, url)) return bad('unauthorized', 401); const { enrichMissing } = await import('../../src/lib/enrich.mts'); return json(await enrichMissing({ max: +(url.searchParams.get('max') || 25) })); }
+    if (path === '/admin/enrich' && req.method === 'POST') { if (!secretOk(req, url)) return bad('unauthorized', 401); const { enrichMissing } = await import('../../src/lib/enrich.mts'); return json(await enrichMissing({ max: +(url.searchParams.get('max') || 25), force: url.searchParams.get('force') === '1' })); }
     if (path === '/admin/rescore' && req.method === 'POST') {
       if (!secretOk(req, url)) return bad('unauthorized', 401);
       const { score } = await import('../../src/lib/score.mts');
