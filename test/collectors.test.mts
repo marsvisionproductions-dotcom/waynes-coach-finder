@@ -29,9 +29,9 @@ test('sitemap parse', () => {
 });
 
 test('prevost-stuff list page', () => {
-  const html = `<table><tr><td><a href="coaches/2008marathon.htm">2008 Prevost Marathon H3-45 Double Slide</a> $389,000 <b>New Listing 9/1/2026</b></td></tr><tr><td><a href="about.htm">About us</a> we sell parts</td></tr></table>`;
-  const items = parsePrevostStuff(html); assert.equal(items.length, 1); assert.equal(items[0].url, 'https://prevost-stuff.com/coaches/2008marathon.htm'); assert.equal(new Date(items[0].posted_at as Date).getMonth(), 8);
-  const n = normalize(items[0]); assert.equal(n.price, 389000); assert.equal(n.converter, 'Marathon');
+  const html = `<table><tr><td><a href="2008PrevostMarathonH_Johns090126.html">2008 Prevost Marathon H3-45 Double Slide</a> $389,000 <b>New Listing 9/1/2026</b></td></tr><tr><td><a href="about.htm">About us</a> we sell parts</td></tr></table>`;
+  const items = parsePrevostStuff(html); assert.equal(items.length, 1); assert.equal(items[0].url, 'https://prevost-stuff.com/2008PrevostMarathonH_Johns090126.html'); assert.equal(new Date(items[0].posted_at as Date).getMonth(), 8);
+  const n = normalize(items[0]); assert.equal(n.price, 389000); assert.equal(n.converter, 'Marathon'); assert.equal(n.seller_type, 'private');
 });
 
 test('generic page extraction (OG + JSON-LD)', () => {

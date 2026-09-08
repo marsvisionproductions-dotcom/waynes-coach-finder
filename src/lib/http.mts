@@ -1,5 +1,6 @@
 // Polite fetch: identifies itself, times out, never retries a 403, small delay between calls to the same host.
-export const UA = 'CoachFinder/0.1 (+https://app.ppitgaihq.com/bot; private-seller coach search for The Motorcoach Store)';
+// Standard well-behaved crawler format (the same shape Google/Bing use). Honestly identified; some hosts 403 anything else.
+export const UA = 'Mozilla/5.0 (compatible; CoachFinder/0.1; +https://waynes-coach-finder.netlify.app)';
 
 const lastHit = new Map<string, number>();
 const MIN_GAP_MS = 4000;
@@ -12,7 +13,7 @@ export async function politeFetch(url: string, init: RequestInit = {}, timeoutMs
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal, headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml,application/xml,application/json;q=0.9,*/*;q=0.8', ...(init.headers || {}) } });
+    return await fetch(url, { ...init, signal: ctrl.signal, headers: { 'user-agent': UA, 'accept-language': 'en-US,en;q=0.8', accept: 'text/html,application/xhtml+xml,application/xml,application/json;q=0.9,*/*;q=0.8', ...(init.headers || {}) } });
   } finally { clearTimeout(t); }
 }
 

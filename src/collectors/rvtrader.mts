@@ -9,12 +9,13 @@ import type { RawListing } from '../lib/schema.mts';
 
 export const RVTRADER_SEARCHES = [
   // make-filtered, private sellers, newest first. Verified in the browser before first run; adjust in settings if RVTrader changes params.
-  'https://www.rvtrader.com/Prevost/rvs-for-sale?make=Prevost&sort=date%3Adesc&sellerType=private',
-  'https://www.rvtrader.com/Newell/rvs-for-sale?make=Newell&sort=date%3Adesc&sellerType=private',
-  'https://www.rvtrader.com/Foretravel/rvs-for-sale?make=Foretravel&sort=date%3Adesc&sellerType=private',
-  'https://www.rvtrader.com/Tiffin/rvs-for-sale?make=Tiffin&model=Zephyr&sort=date%3Adesc&sellerType=private',
-  'https://www.rvtrader.com/Newmar/rvs-for-sale?make=Newmar&model=King%20Aire&sort=date%3Adesc&sellerType=private',
-  'https://www.rvtrader.com/Entegra/rvs-for-sale?make=Entegra&model=Cornerstone&sort=date%3Adesc&sellerType=private',
+  // Verified in the browser 2026-09-08: seller_type=Private is the real private-owner filter; there is no newest-first sort, so we fetch the (small) private list per make daily and let first_seen_at decide what's new.
+  'https://www.rvtrader.com/Prevost/rvs-for-sale?make=Prevost&seller_type=Private',
+  'https://www.rvtrader.com/Newell/rvs-for-sale?make=Newell&seller_type=Private',
+  'https://www.rvtrader.com/Foretravel/rvs-for-sale?make=Foretravel&seller_type=Private',
+  'https://www.rvtrader.com/Tiffin/rvs-for-sale?make=Tiffin&seller_type=Private&keyword=Zephyr',
+  'https://www.rvtrader.com/Newmar/rvs-for-sale?make=Newmar&seller_type=Private&keyword=King%20Aire',
+  'https://www.rvtrader.com/Entegra/rvs-for-sale?make=Entegra&seller_type=Private&keyword=Cornerstone',
 ];
 
 /** Parse RVTrader alert-email HTML/text: one listing per link; details from the text between this card's link and the next. */
@@ -30,7 +31,7 @@ export function parseRvtraderEmail(html: string): RawListing[] {
   cards.forEach(([id, c], i) => {
     const endIdx = i + 1 < cards.length ? cards[i + 1][1].idx : Math.min(html.length, c.idx + 3000);
     const chunk = stripTags(html.slice(c.idx, endIdx));
-    const titleFromSlug = c.slug.replace(/-\d{6,}$/, '').replace(/-/g, ' ').trim();
+    const titleFromSlug = c.slug.replace(/-\d{6,}$/, '').replace(/[-+]/g, ' ').trim();
     const price = chunk.match(/\$\s?[\d,]{5,}/)?.[0];
     const loc = chunk.match(/\b([A-Z][A-Za-z .]+,\s*[A-Z]{2})\b(?:\s+\d{5})?/)?.[1];
     const miles = chunk.match(/([\d,]{4,7})\s*(?:miles|mi\b)/i)?.[1];

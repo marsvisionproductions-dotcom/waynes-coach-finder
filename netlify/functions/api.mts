@@ -136,6 +136,16 @@ export default async (req: Request, _ctx: Context) => {
       const r = await fetch(`${siteUrl(req)}/.netlify/functions/collect-background`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': process.env.INGEST_SECRET || '' }, body: JSON.stringify({ trigger: 'manual', ...body }) });
       return json({ started: r.status === 202, status: r.status });
     }
+    if (path === '/admin/reset-source' && req.method === 'POST') {
+      // Remove untouched New rows that came only from one source (used after fixing a parser), then re-run that source.
+      if (!secretOk(req, url)) return bad('unauthorized', 401);
+      const source = url.searchParams.get('source'); if (!source) return bad('source required');
+      const rows = await sql`DELETE FROM listings l WHERE l.stage = 'new' AND l.favorite = false
+        AND NOT EXISTS (SELECT 1 FROM events e WHERE e.listing_id = l.id AND e.kind <> 'system')
+        AND NOT EXISTS (SELECT 1 FROM listing_sources s WHERE s.listing_id = l.id AND s.source <> ${source})
+        AND EXISTS (SELECT 1 FROM listing_sources s WHERE s.listing_id = l.id AND s.source = ${source}) RETURNING l.id`;
+      return json({ deleted: rows.length });
+    }
     if (path === '/runs' && req.method === 'GET') { const rows = await sql`SELECT id, started_at, finished_at, trigger, status, summary FROM runs ORDER BY id DESC LIMIT 20`; return json({ runs: rows }); }
     if (path === '/digest' && req.method === 'GET') { const d = await buildDigest(siteUrl(req)); return new Response(d.html, { headers: { 'content-type': 'text/html; charset=utf-8' } }); }
     if (path === '/digest' && req.method === 'POST') { if (!secretOk(req, url)) return bad('unauthorized', 401); return json(await sendDigest({ siteUrl: siteUrl(req), force: true })); }
