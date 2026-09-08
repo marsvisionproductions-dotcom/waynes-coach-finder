@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17293A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coach Finder">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<title>Wayne's Coach Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --shell:#0F1A24; --bg:#17293A; --panel:#1E3346; --panel-2:#25405A; --line:#2F4A62; --line-2:#3B5A75;
+  --ink:#EDF2F6; --ink-2:#B7C5D1; --ink-3:#7F93A5;
+  --brass:#D8A853; --brass-ink:#1A1508; --brass-soft:rgba(216,168,83,.14);
+  --good:#5FCB8E; --good-bg:rgba(95,203,142,.14); --warn:#E9B24A; --warn-bg:rgba(233,178,74,.14); --bad:#EE7A63; --bad-bg:rgba(238,122,99,.14); --info:#7FB6E8; --info-bg:rgba(127,182,232,.14);
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -14px rgba(0,0,0,.6); --r:10px;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--shell);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a.btn{text-decoration:none}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;margin:0;line-height:1.15;text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.num{font-variant-numeric:tabular-nums}
+.topbar{height:52px;display:flex;align-items:center;gap:1.25rem;padding:0 1.25rem;background:var(--shell);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top)}
+.topbar .brand{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;letter-spacing:.02em;font-size:1rem;display:flex;align-items:center;gap:.5rem}
+.topbar .brand i{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--brass),#8E6A25);display:inline-block}
+.topbar .spacer{flex:1}
+.topbar .user{width:30px;height:30px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line-2);display:grid;place-items:center;font-size:.75rem;font-weight:600;color:var(--ink-2)}
+.main{max-width:1000px;margin:0 auto;padding:1.25rem 1.25rem 4rem}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.head h1{font-size:1.6rem;font-weight:700}
+.head .sub{color:var(--ink-3);font-size:.86rem;margin-top:.2rem}
+.head .sub b{color:var(--ink-2);font-weight:500}
+.head .sub .due{color:var(--warn);font-weight:600}
+.head .right{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.45rem .85rem;border-radius:8px;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);font-weight:500;font-size:.85rem;white-space:nowrap;line-height:1.3}
+.btn:hover{background:var(--panel-2)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.good{background:var(--good-bg);color:var(--good);border-color:rgba(95,203,142,.4)}
+.btn.bad{background:transparent;color:var(--ink-3);border-color:var(--line-2)}
+.btn.bad:hover{color:var(--bad);border-color:rgba(238,122,99,.5);background:var(--bad-bg)}
+.btn.small{padding:.3rem .6rem;font-size:.78rem;border-radius:6px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--panel)}
+.btn.big{padding:.55rem 1rem;font-size:.9rem;font-weight:600;min-width:112px}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;background:var(--shell);border:1px solid var(--line);border-radius:12px;padding:.35rem;margin-bottom:.9rem}
+.tab{display:flex;flex-direction:column;align-items:center;gap:.05rem;padding:.55rem .5rem;border-radius:9px;color:var(--ink-3);font-weight:500;font-size:.86rem;position:relative}
+.tab:hover{background:var(--panel)}
+.tab .n{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.35rem;line-height:1;color:var(--ink-2)}
+.tab.on{background:var(--panel-2);color:var(--ink)}
+.tab.on .n{color:var(--brass)}
+.tab .dot{position:absolute;top:.45rem;right:.6rem;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.filterbar{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.filterbar input[type=search]{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.4rem .65rem;font:inherit;font-size:.85rem}
+select{background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.35rem .55rem;font:inherit;font-size:.8rem}
+.chips{display:none;gap:.4rem;flex-wrap:wrap;width:100%;padding-top:.2rem}
+.chips.open{display:flex}
+.chip{padding:.26rem .65rem;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);color:var(--ink-2);font-size:.78rem;font-weight:500}
+.chip.on{background:var(--brass-soft);border-color:var(--brass);color:var(--brass)}
+.list{display:flex;flex-direction:column;gap:.5rem}
+.row{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.row.open{border-color:var(--line-2)}
+.row.gone .top{opacity:.6}
+.top{display:grid;grid-template-columns:128px minmax(0,1fr) auto;gap:.9rem;padding:.7rem;cursor:pointer;align-items:center}
+.thumb{aspect-ratio:4/3;border-radius:7px;overflow:hidden;position:relative;background:#0f1a24}
+.thumb img,.thumb svg{width:100%;height:100%;display:block;object-fit:cover}
+.thumb .tag{position:absolute;left:.35rem;top:.35rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.08rem .4rem;border-radius:4px;background:var(--brass);color:var(--brass-ink)}
+.thumb .tag.plain{background:rgba(15,26,36,.85);color:var(--ink-2)}
+.body{min-width:0;display:flex;flex-direction:column;gap:.15rem}
+.title{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.05rem;line-height:1.2;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.l1{display:flex;flex-wrap:wrap;gap:.15rem .8rem;color:var(--ink-2);font-size:.84rem}
+.l1 b{color:var(--ink);font-weight:500}
+.l2{display:flex;flex-wrap:wrap;gap:.3rem .65rem;align-items:center;font-size:.77rem;color:var(--ink-3)}
+.l2 b{color:var(--ink-2);font-weight:500}
+.pill{display:inline-block;font-size:.66rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:.1rem .48rem;border-radius:999px;line-height:1.6;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.info{background:var(--info-bg);color:var(--info)}.pill.neutral{background:var(--panel-2);color:var(--ink-2)}
+.src{display:inline-flex;align-items:center;gap:.3rem}
+.src i{width:7px;height:7px;border-radius:2px;display:inline-block;background:var(--ink-3)}
+.src.fb i,.src.fbgroup i{background:#4A8DE0}.src.ebay i{background:#E8C23B}.src.rvt i{background:#5FCB8E}.src.rvtrader i{background:#E9784A}.src.prevoststuff i{background:#B48CE8}.src.craigslist i{background:#9B5FBF}.src.newellgurus i{background:#63C7C2}.src.prevostrvforsale i{background:#D8A853}.src.rvusa i{background:#8FA3B4}.src.capture i,.src.manual i{background:var(--brass)}
+.side{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem;min-width:190px}
+.price{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.2rem;line-height:1.1}
+.price small{font-family:"IBM Plex Sans",sans-serif;font-size:.7rem;font-weight:500;color:var(--good);display:block;text-align:right}
+.acts{display:flex;gap:.35rem;align-items:center}
+.star{width:32px;height:32px;border-radius:7px;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--ink-3);font-size:1rem}
+.star.on{color:var(--brass);border-color:var(--brass);background:var(--brass-soft)}
+.twirl{color:var(--ink-3);font-size:.8rem;display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .4rem;border-radius:6px}
+.twirl i{display:inline-block;transition:transform .15s;font-style:normal}
+.row.open .twirl i{transform:rotate(180deg)}
+.empty{padding:2.5rem 1rem;text-align:center;color:var(--ink-3);border:1px dashed var(--line-2);border-radius:var(--r)}
+.detail{display:none;border-top:1px solid var(--line);padding:1rem .9rem 1.1rem;background:rgba(15,26,36,.35)}
+.row.open .detail{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1.25rem}
+.sec{margin-bottom:1rem}.sec:last-child{margin-bottom:0}
+.sec h3{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:.45rem;display:flex;justify-content:space-between;align-items:center}
+.gallery{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:.3rem;height:180px}
+.gallery .g{border-radius:6px;overflow:hidden;background:#0f1a24}
+.gallery .g:first-child{grid-row:1/3}
+.gallery img,.gallery svg{width:100%;height:100%;display:block;object-fit:cover}
+.desc{font-size:.85rem;color:var(--ink-2);white-space:pre-line;max-width:60ch;max-height:14rem;overflow:auto}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.2rem 1rem;font-size:.83rem;margin-top:.6rem}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0;color:var(--ink);font-weight:500}
+.kv dd input{background:transparent;border:0;border-bottom:1px dashed var(--line-2);color:var(--ink);font:inherit;width:100%;padding:0 .1rem}
+.srclist{display:flex;flex-wrap:wrap;gap:.35rem;font-size:.8rem}
+.srclist a{color:var(--ink);text-decoration:none;display:inline-flex;gap:.4rem;align-items:center;padding:.3rem .6rem;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.srclist a:hover{border-color:var(--line-2)}
+.contact{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.4rem;font-size:.85rem}
+.cline{display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap}
+.cline span:first-child{color:var(--ink-3)}.cline b{font-weight:500}
+.cline .bts{display:flex;gap:.3rem;align-items:center}
+.contact .note{color:var(--ink-3);font-size:.75rem;border-top:1px solid var(--line);padding-top:.4rem;margin-top:.1rem}
+.tones{display:flex;gap:.3rem;margin-bottom:.4rem}
+.tones button{padding:.22rem .55rem;border-radius:6px;font-size:.74rem;border:1px solid var(--line-2);color:var(--ink-2)}
+.tones button.on{border-color:var(--brass);color:var(--brass);background:var(--brass-soft)}
+textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.55rem .65rem;font:inherit;font-size:.84rem;line-height:1.5;resize:vertical;min-height:104px}
+.draftacts{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem;align-items:center}
+.hint{font-size:.74rem;color:var(--ink-3);margin-top:.4rem;max-width:56ch}
+.qrbox{display:grid;grid-template-columns:auto 1fr;gap:.8rem;align-items:center;margin-top:.5rem;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.7rem;font-size:.78rem;color:var(--ink-2)}
+.qrbox .qr{background:#EDF2F6;padding:6px;border-radius:6px;width:132px;height:132px}
+.qrbox .qr img,.qrbox .qr canvas{display:block}
+.qrbox b{color:var(--ink);font-weight:600}
+.followup{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--ink-2);flex-wrap:wrap}
+.followup input{background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:6px;padding:.25rem .45rem;font:inherit;font-size:.8rem;color-scheme:dark}
+.timeline{display:flex;flex-direction:column;gap:.4rem;font-size:.8rem;max-height:16rem;overflow:auto}
+.ev{display:grid;grid-template-columns:78px 1fr;gap:.6rem}
+.ev .when{color:var(--ink-3);font-size:.72rem;padding-top:.1rem}
+.ev .what{color:var(--ink-2)}.ev .what b{color:var(--ink);font-weight:500}
+.ev.system .what{color:var(--ink-3)}
+.noteadd{display:flex;gap:.4rem;margin-top:.4rem}
+.noteadd input{flex:1;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.4rem .6rem;font:inherit;font-size:.82rem}
+.toast{position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--shell);padding:.5rem .6rem .5rem .9rem;border-radius:8px;font-size:.82rem;font-weight:500;opacity:0;pointer-events:none;transition:all .18s;display:flex;gap:.6rem;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:20;max-width:92vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast button{background:var(--brass);color:var(--brass-ink);padding:.2rem .55rem;border-radius:5px;font-size:.76rem;font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(15,26,36,.7);display:none;align-items:center;justify-content:center;z-index:30;padding:1rem}
+.modal.open{display:flex}
+.modal .box{background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:1.25rem;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal h2{font-size:1.15rem;margin-bottom:.6rem}
+.modal p{color:var(--ink-2);font-size:.86rem;margin:.4rem 0}
+.modal .bm{display:inline-block;padding:.5rem .9rem;background:var(--brass);color:var(--brass-ink);border-radius:8px;font-weight:600;text-decoration:none;cursor:grab}
+.modal label{display:block;font-size:.76rem;color:var(--ink-3);margin-top:.6rem}
+.modal input,.modal textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.45rem .6rem;font:inherit;font-size:.85rem}
+.modal textarea{min-height:80px}
+.modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.modal .acts{justify-content:flex-end;margin-top:.9rem}
+.skeleton{height:96px;border-radius:var(--r);background:linear-gradient(90deg,var(--panel),var(--panel-2),var(--panel));background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{0%{background-position:0 0}100%{background-position:-200% 0}}
+@media (max-width:760px){
+  .tabs{gap:.2rem;padding:.25rem}.tab{padding:.45rem .2rem;font-size:.72rem}.tab .n{font-size:1.1rem}
+  .top{grid-template-columns:96px minmax(0,1fr)}
+  .side{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;min-width:0}
+  .row.open .detail{grid-template-columns:1fr}
+  .btn.big{min-width:0;padding:.5rem .8rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><i></i>Coach Finder</div>
+  <div class="spacer"></div>
+  <div class="user" id="userInitial">W</div>
+</div>
+
+<div class="main">
+  <div class="head">
+    <div>
+      <h1>Wayne's Coach Finder</h1>
+      <div class="sub" id="sub">Loading…</div>
+    </div>
+    <div class="right">
+      <button class="btn ghost small" onclick="openModal('capture')">＋ Capture</button>
+      <button class="btn ghost small" onclick="openModal('manual')">＋ Add by hand</button>
+      <button class="btn small" id="runBtn" onclick="runNow()">Run now</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="filterbar" id="filterbar"></div>
+  <div id="view"><div class="skeleton"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ---------- state ----------
+const STAGES={new:'New',contacted:'Contacted',talking:'Talking',won:'Won',lost:'Lost'};
+const ORDER=['new','contacted','talking','won','lost'];
+const NEXT={ new:[['contacted','Contacted','good'],['lost','Lost','bad']], contacted:[['talking','They replied','good'],['lost','Lost','bad']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
+const SOURCE_NAMES={fb:'Facebook Marketplace',fbgroup:'Facebook group',ebay:'eBay Motors',rvt:'RVT.com',rvtrader:'RVTrader',prevoststuff:'Prevost-Stuff',craigslist:'Craigslist',newellgurus:'NewellGurus',foreforums:'ForeForums',prevostrvforsale:'PrevostRVForSale',rvusa:'RVUSA',rvuniverse:'RVUniverse',autotrader:'Autotrader',capture:'Captured',manual:'Added by hand'};
+const ME={name:'Wayne',phone:'',company:'The Motorcoach Store',city:'Bradenton'};
+const S={tab:'new',open:null,q:'',makes:new Set(),favOnly:false,brokers:false,sort:'score',showFilters:false,tone:'text',draftText:null,draftFor:null,qr:false,stats:null,rows:[],detail:{},loading:false};
+
+// ---------- api ----------
+async function api(path,opts={}){
+  const r=await fetch('/api'+path,{headers:{'content-type':'application/json'},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+async function loadStats(){ S.stats=await api('/stats'); if(S.stats.buyer){Object.assign(ME,S.stats.buyer);document.getElementById('userInitial').textContent=(ME.name||'W')[0];} renderSub(); renderTabs(); }
+async function loadRows(){ S.loading=true; renderView(); const j=await api(`/listings?stage=${S.tab}&brokers=${S.brokers?1:0}`); S.rows=j.listings; S.loading=false; renderView(); }
+async function loadDetail(id){ const j=await api(`/listings/${id}`); S.detail[id]=j; const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; renderView(); }
+async function refresh(){ try{ await Promise.all([loadStats(),loadRows()]); }catch(e){ toast('Could not load: '+e.message); } }
+
+// ---------- helpers ----------
+const money=n=>n==null?'':'$'+Math.round(Number(n)).toLocaleString('en-US');
+const NOW=()=>new Date();
+const postedDate=x=>new Date(x.posted_at||x.first_seen_at);
+const daysOn=x=>Math.max(0,Math.floor((NOW()-postedDate(x))/864e5));
+function ago(x){const h=Math.floor((NOW()-postedDate(x))/36e5); if(h<1)return 'just now'; if(h<24)return h+' h ago'; const dd=Math.floor(h/24); return dd===1?'yesterday':dd+' days ago';}
+const fmtDay=t=>new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const fmtWhen=t=>new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric'});
+const todayIso=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+function dueState(x){ if(!x.followup_on||!['contacted','talking'].includes(x.stage))return null; const f=String(x.followup_on).slice(0,10), t=todayIso(); return f<t?'overdue':f===t?'today':'later'; }
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const title=x=>[x.conv_year,x.make,x.model].filter(Boolean).join(' ')+(x.converter&&x.converter!==x.make?' · '+x.converter:'');
+function coachSvg(seed){ const hues=['#3B4F63','#2B2F3A','#2E3E4C','#26323F','#33393F','#1E2A38']; const p=[hues[seed%hues.length],'#B9C4CE'];
+  return `<svg viewBox="0 0 160 120" role="img" aria-label="No photo"><defs><linearGradient id="g${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p[0]}"/><stop offset="1" stop-color="#0f1a24"/></linearGradient></defs><rect width="160" height="120" fill="url(#g${seed})"/><rect x="0" y="84" width="160" height="36" fill="#0b131b"/><path d="M14 78 V46 q0-10 10-10 h104 q12 0 14 12 V78 z" fill="${p[1]}" opacity=".8"/><rect x="24" y="44" width="92" height="16" rx="2" fill="#0f1a24" opacity=".85"/><circle cx="40" cy="80" r="8" fill="#0b131b"/><circle cx="116" cy="80" r="8" fill="#0b131b"/></svg>`; }
+const photo=(u,seed)=>u?`<img src="${esc(u)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:coachSvg(${seed})}).firstChild)">`:coachSvg(seed);
+
+// ---------- filtering (client-side within the stage) ----------
+function visible(){
+  let a=S.rows.slice();
+  if(S.makes.size) a=a.filter(x=>S.makes.has(x.make));
+  if(S.favOnly) a=a.filter(x=>x.favorite);
+  if(S.q){const q=S.q.toLowerCase(); a=a.filter(x=>[x.make,x.model,x.converter,x.city,x.state,x.seller_name,x.title_raw].join(' ').toLowerCase().includes(q));}
+  const f={score:(p,q)=>(q.score||0)-(p.score||0),newest:(p,q)=>postedDate(q)-postedDate(p),price:(p,q)=>(p.price||0)-(q.price||0),dist:(p,q)=>(p.dist_mi??1e9)-(q.dist_mi??1e9)}[S.sort];
+  a.sort(f);
+  if(['contacted','talking'].includes(S.tab)){ const rank=x=>({overdue:0,today:1,later:2}[dueState(x)]??3); a.sort((p,q)=>rank(p)-rank(q)); }
+  if(S.tab==='new') a.sort((p,q)=>(q.favorite?1:0)-(p.favorite?1:0));
+  return a;
+}
+
+// ---------- render ----------
+function render(){ renderSub(); renderTabs(); renderFilters(); renderView(); }
+function renderSub(){
+  const st=S.stats; if(!st){document.getElementById('sub').textContent='Loading…';return;}
+  const lr=st.lastRun; const when=lr?new Date(lr.started_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'never';
+  document.getElementById('sub').innerHTML=`<b>${st.fresh}</b> new since yesterday · last run <b>${when}</b>${st.due?` · <span class="due">${st.due} follow-up${st.due>1?'s':''} due</span>`:''}`;
+}
+function renderTabs(){
+  const st=S.stats||{counts:{},dueBy:{}};
+  document.getElementById('tabs').innerHTML=ORDER.map(k=>`<button class="tab ${S.tab===k?'on':''}" onclick="setTab('${k}')"><span class="n num">${st.counts[k]??'–'}</span><span>${STAGES[k]}</span>${st.dueBy&&st.dueBy[k]?'<span class="dot" title="Follow-up due"></span>':''}</button>`).join('');
+}
+function renderFilters(){
+  const makes=['Prevost','Newell','Foretravel','Tiffin','Newmar','Entegra'];
+  document.getElementById('filterbar').innerHTML=`
+    <input type="search" placeholder="Search model, converter, city, seller…" value="${esc(S.q)}" oninput="S.q=this.value;renderView()">
+    <select onchange="S.sort=this.value;renderView()" aria-label="Sort"><option value="score" ${S.sort==='score'?'selected':''}>Best first</option><option value="newest" ${S.sort==='newest'?'selected':''}>Newest</option><option value="price" ${S.sort==='price'?'selected':''}>Price</option><option value="dist" ${S.sort==='dist'?'selected':''}>Closest</option></select>
+    <button class="btn small ${S.showFilters||S.makes.size||S.favOnly||S.brokers?'primary':''}" onclick="S.showFilters=!S.showFilters;renderFilters()">Filters${S.makes.size?' · '+S.makes.size:''}${S.favOnly?' · ★':''}</button>
+    <div class="chips ${S.showFilters?'open':''}">
+      ${makes.map(m=>`<button class="chip ${S.makes.has(m)?'on':''}" onclick="S.makes.has('${m}')?S.makes.delete('${m}'):S.makes.add('${m}');renderFilters();renderView()">${m}</button>`).join('')}
+      <button class="chip ${S.favOnly?'on':''}" onclick="S.favOnly=!S.favOnly;renderFilters();renderView()">★ Favorites only</button>
+      <button class="chip ${S.brokers?'on':''}" onclick="S.brokers=!S.brokers;renderFilters();loadRows()" title="Private owners always; dealers never">${S.brokers?'✓ ':''}Include brokers</button>
+    </div>`;
+}
+function renderView(){
+  const v=document.getElementById('view');
+  if(S.loading&&!S.rows.length){v.innerHTML='<div class="skeleton"></div><div class="skeleton" style="margin-top:.5rem"></div>';return;}
+  const rows=visible();
+  const emptyMsg={new:'Inbox is clear. The next run is at 6:00 am.',contacted:'Nothing waiting on a reply.',talking:'No live conversations.',won:'No coaches bought yet.',lost:'Nothing here.'}[S.tab];
+  v.innerHTML=rows.length?`<div class="list">${rows.map(rowHtml).join('')}</div>`:`<div class="empty">${emptyMsg}</div>`;
+  if(S.open&&S.qr){const x=S.rows.find(r=>r.id===S.open); if(x) drawQr(x);}
+}
+function rowHtml(x){
+  const open=S.open===x.id; const dom=daysOn(x); const due=dueState(x);
+  const reach=x.contact_phone?'☎ phone':x.contact_email?'✉ email':x.contact_url?'link':'no contact';
+  const btns=NEXT[x.stage].map(([to,label,cls])=>`<button class="btn big ${cls}" onclick="event.stopPropagation();move(${x.id},'${to}')">${label}</button>`).join('');
+  const isCapture=(x.sources||[]).some(s=>['capture','manual'].includes(s.source));
+  const tag=x.stage==='new'&&dom<=1?'<span class="tag">New</span>':isCapture&&x.stage==='new'?'<span class="tag plain">Captured</span>':'';
+  const duePill=due?` · <span class="pill ${due==='overdue'?'bad':due==='today'?'warn':'neutral'}">${due==='overdue'?'Follow up · overdue':due==='today'?'Follow up today':'Follow up '+fmtDay(x.followup_on)}</span>`:'';
+  const last=x.last_event?`${esc(x.last_event.body)} · ${fmtDay(x.last_event.at)}`:'';
+  const statusLine = x.stage==='new' ? `Posted <b>${ago(x)}</b> · <b class="num">${dom}</b> day${dom===1?'':'s'} on market`
+    : x.stage==='contacted' ? `${last}${duePill}` : x.stage==='talking' ? `${last}${x.our_number?` · our number <b>${money(x.our_number)}</b>`:''}${duePill}`
+    : x.stage==='won' ? `<span class="pill good">Bought ${money(x.our_number||x.price)}</span> · ${last}` : `<span class="pill bad">${x.lost_reason==='gone'?'Gone from all sources':'Passed'}</span> · ${last}`;
+  const srcs=(x.sources||[]).map(s=>`<span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
+  const sellerPill=x.seller_type==='broker'?' <span class="pill warn">Broker</span>':x.seller_type==='unknown'?' <span class="pill neutral" title="We could not tell from the listing">Seller ?</span>':'';
+  return `<div class="row ${open?'open':''} ${x.lost_reason==='gone'?'gone':''}" id="row${x.id}">
+    <div class="top" onclick="toggle(${x.id})" tabindex="0" onkeydown="if(event.key==='Enter')toggle(${x.id})" aria-expanded="${open}">
+      <div class="thumb">${photo(x.thumb_url,x.id)}${tag}</div>
+      <div class="body">
+        <div class="title">${esc(title(x))||esc(x.title_raw||'Untitled coach')}${sellerPill}</div>
+        <div class="l1">${x.mileage?`<span><b class="num">${Number(x.mileage).toLocaleString()}</b> mi</span>`:''}${x.slides!=null?`<span><b class="num">${x.slides}</b> slides</span>`:''}<span>${esc([x.city,x.state].filter(Boolean).join(', ')||'Location unknown')}${x.dist_mi!=null?` · <b class="num">${Number(x.dist_mi).toLocaleString()}</b> mi`:''}</span><span>${esc(x.seller_name||'Seller')} · ${reach}</span></div>
+        <div class="l2">${statusLine}${x.stage==='new'?srcs:''}</div>
+      </div>
+      <div class="side">
+        <div class="price num">${money(x.price)||'<span style="color:var(--ink-3);font-size:.9rem">no price</span>'}</div>
+        <div class="acts"><button class="star ${x.favorite?'on':''}" aria-label="Favorite" onclick="event.stopPropagation();toggleFav(${x.id})">${x.favorite?'★':'☆'}</button>${btns}</div>
+        <span class="twirl">${open?'Less':'Details'} <i>⌄</i></span>
+      </div>
+    </div>
+    <div class="detail">${open?detailHtml(x):''}</div>
+  </div>`;
+}
+function detailHtml(x){
+  const d=S.detail[x.id]; const showDraft=['new','contacted'].includes(x.stage); const photos=Array.isArray(x.photos)?x.photos:[];
+  const sources=d?d.sources:(x.sources||[]); const events=d?d.events:null;
+  return `
+   <div>
+    <div class="sec"><div class="gallery"><div class="g">${photo(photos[0]||x.thumb_url,x.id)}</div><div class="g">${photo(photos[1],x.id+1)}</div><div class="g">${photo(photos[2],x.id+2)}</div></div></div>
+    <div class="sec"><h3>Listing <span style="font-weight:400;letter-spacing:0;text-transform:none">${(x.photo_count||photos.length)} photo${(x.photo_count||photos.length)===1?"":"s"} · score ${x.score??'–'}</span></h3><div class="desc">${esc(x.description||x.title_raw||'')}</div>
+      <dl class="kv"><dt>Title as posted</dt><dd style="font-weight:400;color:var(--ink-2)">${esc(x.title_raw||'')}</dd>
+        <dt>Make / model</dt><dd><input value="${esc([x.make,x.model].filter(Boolean).join(' '))}" onchange="fix(${x.id},'makemodel',this.value)"></dd>
+        <dt>Converter</dt><dd><input value="${esc(x.converter||'')}" onchange="fix(${x.id},'converter',this.value)"></dd>
+        <dt>Year</dt><dd><input class="num" value="${esc(x.conv_year||'')}" onchange="fix(${x.id},'conv_year',this.value)"></dd>
+        <dt>Mileage</dt><dd><input class="num" value="${esc(x.mileage||'')}" onchange="fix(${x.id},'mileage',this.value)"></dd>
+        <dt>Slides</dt><dd><input class="num" value="${esc(x.slides??'')}" onchange="fix(${x.id},'slides',this.value)"></dd>
+        <dt>Price</dt><dd><input class="num" value="${esc(x.price?Math.round(x.price):'')}" onchange="fix(${x.id},'price',this.value)"></dd>
+        <dt>City, ST</dt><dd><input value="${esc([x.city,x.state].filter(Boolean).join(', '))}" onchange="fix(${x.id},'location',this.value)"></dd>
+        <dt>Posted</dt><dd>${x.posted_at?new Date(x.posted_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'unknown'} · first seen ${fmtWhen(x.first_seen_at)}</dd></dl></div>
+    <div class="sec"><h3>Seen on</h3><div class="srclist">${sources.map(s=>`<a href="${esc(s.url||'#')}" target="_blank" rel="noopener"><span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span><span style="color:var(--ink-3)">↗</span></a>`).join('')||'<span style="color:var(--ink-3);font-size:.8rem">—</span>'}</div></div>
+    <div class="sec"><h3>History &amp; notes</h3><div class="timeline">${events?events.map(e=>`<div class="ev ${e.kind}"><span class="when">${fmtWhen(e.at)}</span><span class="what">${e.kind==='stage'?'<b>'+esc(e.body)+'</b>':esc(e.body)}</span></div>`).join('')||'<span style="color:var(--ink-3)">No history yet</span>':'<span style="color:var(--ink-3)">Loading…</span>'}</div>
+      <div class="noteadd"><input id="note${x.id}" placeholder="Add a note…" onkeydown="if(event.key==='Enter')addNote(${x.id})"><button class="btn small" onclick="addNote(${x.id})">Add</button></div></div>
+   </div>
+   <div>
+    <div class="sec"><h3>Seller</h3><div class="contact">
+      <div class="cline"><span>Name</span><b><input style="background:transparent;border:0;border-bottom:1px dashed var(--line-2);color:var(--ink);font:inherit;text-align:right" value="${esc(x.seller_name||'')}" placeholder="name" onchange="fix(${x.id},'seller_name',this.value)"></b></div>
+      <div class="cline"><span>Phone</span><span class="bts"><input class="mono" style="background:transparent;border:0;border-bottom:1px dashed var(--line-2);color:var(--ink);font:inherit;width:130px" value="${esc(x.contact_phone||'')}" placeholder="add phone" onchange="fix(${x.id},'contact_phone',this.value)">${x.contact_phone?`<a class="btn small" href="tel:${telDigits(x.contact_phone)}" onclick="logged(${x.id},'Called')">Call</a><a class="btn small primary" href="${smsLink(x)}" onclick="logged(${x.id},'Texted')">Text</a>`:''}</span></div>
+      <div class="cline"><span>Email</span><span class="bts"><input class="mono" style="background:transparent;border:0;border-bottom:1px dashed var(--line-2);color:var(--ink);font:inherit;font-size:.78rem;width:170px" value="${esc(x.contact_email||'')}" placeholder="add email" onchange="fix(${x.id},'contact_email',this.value)">${x.contact_email?`<a class="btn small" href="${mailLink(x)}" onclick="logged(${x.id},'Emailed')">Email</a>`:''}</span></div>
+      ${x.contact_url?`<div class="cline"><span>Listing</span><a class="btn small" href="${esc(x.contact_url)}" target="_blank" rel="noopener" onclick="logged(${x.id},'Opened the listing to message')">${/facebook/.test(x.contact_url)?'Message on Facebook ↗':/ebay/.test(x.contact_url)?'Contact on eBay ↗':'Open listing ↗'}</a></div>`:''}
+      <div class="note">${/facebook/.test(x.contact_url||'')&&!x.contact_phone?'Facebook listings don\'t show phone or email — message from your own account.':'Only what the listing shows publicly is stored. Calls and texts go from your own phone.'}</div>
+    </div></div>
+    ${['contacted','talking'].includes(x.stage)?`<div class="sec"><h3>Follow-up</h3><div class="followup">Remind me on <input type="date" value="${x.followup_on?String(x.followup_on).slice(0,10):''}" onchange="patch(${x.id},{followup_on:this.value||null})">${x.stage==='talking'?`<span>Our number <input type="text" class="num" style="width:110px" value="${x.our_number?money(x.our_number):''}" placeholder="$" onchange="patch(${x.id},{our_number:this.value})"></span>`:''}</div></div>`:''}
+    ${showDraft?`<div class="sec"><h3>${x.stage==='new'?'First message':'Follow-up message'}</h3>
+      <div class="tones">${[['text','Text'],['email','Email'],['voice','Voicemail']].map(([k,n])=>`<button class="${S.tone===k?'on':''}" onclick="S.tone='${k}';S.draftText=null;renderView()">${n}</button>`).join('')}</div>
+      <textarea id="draft${x.id}" oninput="S.draftText=this.value;S.draftFor=${x.id};refreshLinks(${x.id})">${esc(S.draftText!=null&&S.draftFor===x.id?S.draftText:draft(x,S.tone))}</textarea>
+      <div class="draftacts">
+        ${x.contact_phone&&S.tone==='text'?`<a class="btn small primary" href="${smsLink(x)}" onclick="logged(${x.id},'Texted')">Text from my phone</a>`:''}
+        ${x.contact_email&&S.tone==='email'?`<a class="btn small primary" href="${mailLink(x)}" onclick="logged(${x.id},'Emailed')">Open in Mail</a>`:''}
+        <button class="btn small" onclick="copyDraft(${x.id})">Copy</button>
+        <button class="btn small ghost" onclick="S.draftText=null;renderView()">Regenerate</button>
+        ${x.contact_phone&&S.tone==='text'?`<button class="btn small ghost" onclick="S.qr=!S.qr;renderView()">${S.qr?'Hide QR':'QR'}</button>`:''}
+      </div>
+      ${S.qr&&x.contact_phone&&S.tone==='text'?`<div class="qrbox"><div class="qr" id="qr${x.id}"></div><div><b>At the desk?</b> Point your phone's camera at this. Messages opens with the seller's number and this text filled in.</div></div>`:''}
+      <div class="hint">Sends from ${esc(ME.name)}'s own number, so replies come straight back. Nothing goes through the app.</div>
+    </div>`:''}
+   </div>`;
+}
+
+// ---------- drafts + links ----------
+function draft(x,tone){
+  const first=(x.seller_name||'').split(' ')[0].replace(/[^A-Za-z]/g,'')||'there';
+  const coach=title(x)||x.title_raw||'coach'; const hook=x.slides>=2?`with the ${x.slides===2?'two':x.slides} slides`:''; const me=ME.name, co=ME.company||'The Motorcoach Store', city=(ME.city||'Bradenton').replace(/,.*$/,'');
+  if(x.stage==='contacted'){
+    if(tone==='text') return `Hi ${first}, ${me} again from ${co}. Still interested in your ${coach} if it's available — happy to make a cash offer this week. Any time good for a quick call?`;
+    if(tone==='email') return `Subject: Following up on your ${coach}\n\nHi ${first},\n\nJust following up on my note about your ${coach}. If it's still available I'd like to make you a straightforward cash offer this week — we handle the title work and pickup, funds before the coach moves.\n\nThanks,\n${me}\n${co} · ${city}, FL${ME.phone?'\n'+ME.phone:''}`;
+    return `Hi ${first}, ${me} at ${co} in ${city}, following up on your ${coach}. Still very interested and can make a cash offer this week. Call me back any time at this number. Thanks.`;
+  }
+  if(tone==='text') return `Hi ${first} — ${me} at ${co} in ${city}. Saw your ${coach} ${hook} come up ${ago(x)==='just now'?'this morning':ago(x)}. We buy coaches like this outright, cash, nationwide pickup. Is it still available, and would you be open to a quick call today?`;
+  if(tone==='email') return `Subject: Your ${coach}\n\nHi ${first},\n\nI'm ${me} with ${co} in ${city}, FL. I came across your ${coach} ${hook} and it's exactly the kind of coach we buy directly from owners — no consignment, no waiting. We make a cash offer, handle the title work digitally, and pick up nationwide, with funds and any payoff completed before the coach moves.\n\nIf it's still available, could you tell me a little about the service history? Happy to talk whenever suits you.\n\nThanks,\n${me}\n${co} · ${city}, FL${ME.phone?'\n'+ME.phone:''}`;
+  return `Hi ${first}, this is ${me} at ${co} in ${city}, Florida. I'm calling about your ${coach} ${hook} — we buy coaches like yours directly from owners, cash, and pick up anywhere in the country. If it's still available I'd love five minutes to talk. You can reach me back at this number any time. Thanks, ${first}.`;
+}
+const telDigits=p=>'+1'+String(p).replace(/\D/g,'').replace(/^1(\d{10})$/,'$1');
+function currentText(x){ return (S.draftFor===x.id&&S.draftText!=null&&S.tone==='text')?S.draftText:draft(x,'text'); }
+function smsLink(x){ return `sms:${telDigits(x.contact_phone)}?&body=${encodeURIComponent(currentText(x))}`; }
+function mailLink(x){ const e=draft(x,'email'); const [s,...b]=e.split('\n'); return `mailto:${x.contact_email}?subject=${encodeURIComponent(s.replace(/^Subject: /,''))}&body=${encodeURIComponent(b.join('\n').trim())}`; }
+function refreshLinks(id){ const x=S.rows.find(y=>y.id===id); if(!x)return; document.querySelectorAll(`#row${id} a[href^="sms:"]`).forEach(a=>a.href=smsLink(x)); if(S.qr) drawQr(x); }
+function drawQr(x){ const el=document.getElementById('qr'+x.id); if(!el) return; if(!window.QRCode){ el.innerHTML='<div style="color:#17293A;font-size:.72rem;padding:.5rem">QR unavailable offline</div>'; return; } el.innerHTML=''; new QRCode(el,{text:smsLink(x),width:120,height:120,colorDark:'#0F1A24',colorLight:'#EDF2F6',correctLevel:QRCode.CorrectLevel.L}); }
+
+// ---------- actions ----------
+async function setTab(k){S.tab=k;S.open=null;S.qr=false;renderTabs();await loadRows();}
+function toggle(id){ S.open=S.open===id?null:id; S.draftText=null; S.qr=false; renderView(); if(S.open){ if(!S.detail[id]) loadDetail(id).catch(e=>toast(e.message)); const el=document.getElementById('row'+id); if(el&&el.getBoundingClientRect().top<60) el.scrollIntoView({block:'start'}); } }
+async function patch(id,body){ try{ const j=await api(`/listings/${id}`,{method:'PATCH',body}); const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; delete S.detail[id]; if(S.open===id) loadDetail(id); renderView(); return j.listing; }catch(e){ toast('Save failed: '+e.message); } }
+async function toggleFav(id){ const x=S.rows.find(y=>y.id===id); await patch(id,{favorite:!x.favorite}); }
+let last=null;
+async function move(id,to,silent){
+  const x=S.rows.find(y=>y.id===id); if(!x||x.stage===to) return;
+  last={id,from:x.stage,followup_on:x.followup_on};
+  const l=await patch(id,{stage:to}); if(!l) return;
+  S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats();
+  if(!silent) toast(`${title(x)} → ${STAGES[to]}`,async()=>{ await api(`/listings/${last.id}`,{method:'PATCH',body:{stage:last.from,followup_on:last.followup_on}}); await refresh(); });
+}
+async function logged(id,what){ const x=S.rows.find(y=>y.id===id); if(!x)return; if(x.stage==='new'){ await api(`/listings/${id}`,{method:'PATCH',body:{stage:'contacted',contact_event:`${what} from ${ME.name}'s phone`}}); S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats(); toast(`${what} · moved to Contacted`); } else { await api(`/listings/${id}`,{method:'PATCH',body:{contact_event:`${what} from ${ME.name}'s phone`}}); delete S.detail[id]; loadDetail(id); } }
+async function addNote(id){ const i=document.getElementById('note'+id); if(!i||!i.value.trim())return; try{ await api(`/listings/${id}/notes`,{method:'POST',body:{text:i.value.trim()}}); delete S.detail[id]; await loadDetail(id); }catch(e){ toast(e.message); } }
+async function fix(id,field,value){
+  const body={};
+  if(field==='makemodel'){ const [make,...rest]=value.trim().split(/\s+/); body.make=make||''; body.model=rest.join(' '); }
+  else if(field==='location'){ const [city,st]=value.split(',').map(s=>s.trim()); body.city=city||''; body.state=(st||'').toUpperCase(); }
+  else if(['conv_year','mileage','slides','price'].includes(field)){ const n=Number(String(value).replace(/[^0-9.]/g,'')); body[field]=value===''?null:(isFinite(n)?n:null); }
+  else body[field]=value;
+  await patch(id,body);
+}
+function copyDraft(id){const t=document.getElementById('draft'+id); try{navigator.clipboard&&navigator.clipboard.writeText(t.value);}catch(e){} toast('Copied');}
+async function runNow(){ const b=document.getElementById('runBtn'); b.disabled=true; try{ const j=await api('/run',{method:'POST',body:{}}); toast(j.started?'Run started — new coaches land in New over the next few minutes':'Run did not start ('+j.status+')'); setTimeout(refresh,45000); }catch(e){ toast(e.message); } finally{ b.disabled=false; } }
+let tt; function toast(m,undo){const t=document.getElementById('toast');t.innerHTML=esc(m)+(undo?'<button id="undo">Undo</button>':'');if(undo)document.getElementById('undo').onclick=()=>{undo();t.classList.remove('show');};t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),undo?6000:2600);}
+
+// ---------- modals: capture bookmarklet + add by hand ----------
+function openModal(kind){
+  const box=document.getElementById('modalBox'); const site=location.origin;
+  const bm=`javascript:(function(){var m=function(n){var e=document.querySelector('meta[property=\\''+n+'\\'],meta[name=\\''+n+'\\']');return e?e.content:''};var q=new URLSearchParams({url:location.href,title:document.title,description:m('og:description')||m('description')||'',price:(document.body.innerText.match(/\\$\\s?[\\d,]{5,}/)||[''])[0]});location.href='${site}/api/capture?'+q.toString();})()`;
+  if(kind==='capture') box.innerHTML=`<h2>Capture a listing</h2>
+    <p>Drag this button to your bookmarks bar. Then, on any coach listing (Facebook, a forum, a dealer site), click it — the coach lands in <b>New</b>.</p>
+    <p><a class="bm" href="${bm.replace(/"/g,'&quot;')}" onclick="event.preventDefault();toast('Drag it to the bookmarks bar rather than clicking')">＋ Save to Coach Finder</a></p>
+    <p>On your phone: share the listing's link to yourself and paste it here.</p>
+    <label>Listing link</label><input id="capUrl" placeholder="https://www.facebook.com/marketplace/item/…">
+    <label>Anything the page won't show us (optional: title, price, city, seller, phone)</label><textarea id="capNotes" placeholder="2008 Marathon H3-45, $389,000, Ocala FL, Dale 352-555-0147"></textarea>
+    <div class="acts"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="captureUrl()">Capture</button></div>`;
+  else box.innerHTML=`<h2>Add a coach by hand</h2>
+    <p>For a coach you heard about by phone, at a rally, or anywhere without a link.</p>
+    <label>Title</label><input id="mTitle" placeholder="2008 Prevost H3-45 Marathon, 2 slides, 118k">
+    <div class="row2"><div><label>Price</label><input id="mPrice" placeholder="$389,000"></div><div><label>City, ST</label><input id="mLoc" placeholder="Ocala, FL"></div></div>
+    <div class="row2"><div><label>Seller name</label><input id="mName"></div><div><label>Phone</label><input id="mPhone"></div></div>
+    <label>Notes</label><textarea id="mNotes"></textarea>
+    <div class="acts"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="addManual()">Add to New</button></div>`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+async function captureUrl(){ const url=document.getElementById('capUrl').value.trim(); const notes=document.getElementById('capNotes').value.trim(); if(!url){toast('Paste a link');return;} try{ const j=await api('/capture',{method:'POST',body:{url,description:notes||undefined}}); closeModal(); toast(j.inserted?'Captured — it\'s in New':j.updated?'Already had it — updated':'Could not read that page'); setTab('new'); }catch(e){ toast(e.message); } }
+async function addManual(){ const g=id=>document.getElementById(id).value.trim(); const t=g('mTitle'); if(!t){toast('Give it a title');return;} try{ const j=await api('/listings',{method:'POST',body:{title:t,price:g('mPrice'),location:g('mLoc'),seller_name:g('mName'),contact_phone:g('mPhone'),description:g('mNotes'),seller_type:'private'}}); closeModal(); toast(j.inserted?'Added to New':'Looks like we already had that one'); setTab('new'); }catch(e){ toast(e.message); } }
+
+// ---------- boot ----------
+(async()=>{
+  renderFilters();
+  await refresh();
+  const m=location.hash.match(/#l=(\d+)/); if(m){ const id=+m[1]; try{ const j=await api(`/listings/${id}`); if(j.listing.stage!==S.tab){ S.tab=j.listing.stage; renderTabs(); await loadRows(); } toggle(id); }catch{} }
+  setInterval(()=>{ if(document.visibilityState==='visible') loadStats().catch(()=>{}); }, 120000);
+})();
+</script>
+</body>
+</html>

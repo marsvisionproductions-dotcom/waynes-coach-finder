@@ -1,0 +1,32 @@
+<!-- Drop-in card for the AIHQ portal. Paste where the other cards live; adjust the class names to the portal's card grid. -->
+<a class="aihq-card coach-finder-card" href="https://waynes-coach-finder.netlify.app" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit">
+  <style>
+    .coach-finder-card{background:#17293A;border:1px solid #2F4A62;border-radius:14px;padding:18px 20px;font-family:-apple-system,"Segoe UI",sans-serif;color:#EDF2F6;position:relative;overflow:hidden;transition:border-color .15s}
+    .coach-finder-card:hover{border-color:#D8A853}
+    .coach-finder-card .cf-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .coach-finder-card .cf-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#D8A853,#8E6A25);display:grid;place-items:center;flex:none}
+    .coach-finder-card .cf-icon svg{width:26px;height:26px}
+    .coach-finder-card h3{margin:0;font-size:17px;font-weight:700;letter-spacing:.01em}
+    .coach-finder-card p{margin:2px 0 0;font-size:12.5px;color:#B7C5D1}
+    .coach-finder-card .cf-stat{display:flex;gap:18px;font-size:12px;color:#7F93A5}
+    .coach-finder-card .cf-stat b{display:block;font-size:22px;font-weight:700;color:#D8A853;line-height:1.1;font-variant-numeric:tabular-nums}
+    .coach-finder-card .cf-go{position:absolute;right:18px;bottom:16px;font-size:12px;color:#D8A853;font-weight:600}
+  </style>
+  <div class="cf-top">
+    <div class="cf-icon"><svg viewBox="0 0 128 128" aria-hidden="true"><path d="M18 84V48q0-10 10-10h66q12 0 14 12v34z" fill="#17293A"/><rect x="28" y="46" width="60" height="16" rx="3" fill="#D8A853"/><circle cx="40" cy="88" r="10" fill="#17293A"/><circle cx="92" cy="88" r="10" fill="#17293A"/></svg></div>
+    <div><h3>Wayne's Coach Finder</h3><p>Private-seller coaches, every morning</p></div>
+  </div>
+  <div class="cf-stat">
+    <span><b data-cf="fresh">–</b>new today</span>
+    <span><b data-cf="new">–</b>in New</span>
+    <span><b data-cf="due">–</b>follow-ups due</span>
+  </div>
+  <span class="cf-go">Open →</span>
+  <script>
+    (function(){ var c=document.currentScript.closest('.coach-finder-card');
+      fetch('https://waynes-coach-finder.netlify.app/api/stats',{credentials:'omit'}).then(function(r){return r.json()}).then(function(s){
+        c.querySelector('[data-cf=fresh]').textContent=s.fresh; c.querySelector('[data-cf=new]').textContent=s.counts.new; c.querySelector('[data-cf=due]').textContent=s.due;
+      }).catch(function(){});
+    })();
+  </script>
+</a>
