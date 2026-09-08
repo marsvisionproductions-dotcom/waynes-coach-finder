@@ -92,3 +92,5 @@ test('area code fallback, contact-name capture, in-City-ST, market summary skipp
   const m = normalize({ source: 'prevostrvforsale', external_id: 'm', url: 'x', title: 'Market Summary for September 7th 2026', description: 'New listings increased from 17 to 25 this week, Prevost XL Coach in Antioch, TN' });
   assert.equal(isRelevant(m), false);
 });
+
+test('"In Durham, NC" is Durham', () => { assert.deepEqual(parseLocation('In Durham, NC'), { city: 'Durham', state: 'NC' }); });

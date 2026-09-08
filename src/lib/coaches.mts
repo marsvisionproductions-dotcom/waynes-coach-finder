@@ -202,7 +202,7 @@ export const STATE_NAMES: Record<string, string> = {
 /** "Ocala, FL" | "Ocala, Florida" | "Ocala FL 34470" → { city, state } */
 export function parseLocation(s?: string | null): { city?: string; state?: string } {
   if (!s) return {};
-  const clean = s.replace(/\s+/g, ' ').replace(/^(?:located in|location:?|near)\s+/i, '').replace(/,?\s*(?:usa|united states)$/i, '').trim();
+  const clean = s.replace(/\s+/g, ' ').replace(/^(?:located in|location:?|near|in|from)\s+/i, '').replace(/,?\s*(?:usa|united states)$/i, '').trim();
   let m = clean.match(/^(.*?)[,\s]+([A-Z]{2})(?:\s+\d{5})?$/);
   if (m) return { city: m[1].replace(/,$/, '').trim() || undefined, state: m[2] };
   m = clean.match(/^(.*?)[,\s]+([A-Za-z ]+)$/);
