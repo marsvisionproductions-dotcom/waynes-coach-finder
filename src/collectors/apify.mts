@@ -15,14 +15,14 @@ export async function startFacebookRun(opts: { siteUrl: string; radiusMi?: numbe
   if (opts.maxUrls) urls = urls.slice(0, opts.maxUrls);
   const input = {
     startUrls: urls.map(url => ({ url })),
-    resultsLimit: 40,               // per start URL — newest-first, so 40 is plenty for a daily window
+    resultsLimit: 25,               // per start URL — newest-first, so 25 is plenty for a daily window
     includeListingDetails: true,    // description, coordinates, timestamps, seller
   };
   const webhooks = [{
-    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED', 'ACTOR.RUN.TIMED_OUT'],
+    eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED', 'ACTOR.RUN.TIMED_OUT', 'ACTOR.RUN.ABORTED'],
     requestUrl: `${opts.siteUrl}/api/apify-webhook?secret=${encodeURIComponent(process.env.INGEST_SECRET || '')}`,
   }];
-  const q = new URLSearchParams({ token, webhooks: Buffer.from(JSON.stringify(webhooks)).toString('base64'), memory: '2048', timeout: '3600' });
+  const q = new URLSearchParams({ token, webhooks: Buffer.from(JSON.stringify(webhooks)).toString('base64'), memory: '2048', timeout: '2400', maxTotalChargeUsd: String(process.env.APIFY_MAX_USD || '6') });
   const r = await fetch(`${API}/acts/${ACTOR}/runs?${q}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
   if (!r.ok) throw new Error(`Apify start failed ${r.status}: ${await r.text()}`);
   const j = await r.json() as any;
@@ -42,27 +42,42 @@ export async function fetchRun(runId: string): Promise<any> {
   return r.ok ? (await r.json() as any).data : null;
 }
 
-/** Map an Apify FB Marketplace item (field names vary a little between actor versions) to our RawListing. */
+// Deep helpers for the actor's nested objects (shapes vary a little between versions).
+function deepFind(o: any, keys: string[], depth = 0): any {
+  if (!o || typeof o !== 'object' || depth > 5) return undefined;
+  for (const k of keys) if (o[k] != null && typeof o[k] !== 'object') return o[k];
+  for (const v of Object.values(o)) { const r = deepFind(v, keys, depth + 1); if (r != null) return r; }
+  return undefined;
+}
+function photoUri(p: any): string | undefined { if (!p) return; if (typeof p === 'string') return p; return p.image?.uri || p.uri || p.url || p.image?.url || deepFind(p, ['uri', 'url']); }
+
+/** Map an Apify FB Marketplace item (apify/facebook-marketplace-scraper) to our RawListing.
+ *  Verified field names: id, itemUrl, listingTitle, customTitle, description{text}, listingPrice{amount,formatted_amount,currency},
+ *  location{reverse_geocode{city,state,city_page{display_name}}}, locationText{text}, listingPhotos[{image{uri}}], primaryListingPhoto{image{uri}},
+ *  timestamp (ISO), isSold/isLive/isPending, listingAttributes, facebookUrl (the search URL it came from). No seller object in this actor. */
 export function mapApifyItem(it: any): RawListing | null {
-  const url: string = it.listingUrl || it.url || it.link || (it.id ? `https://www.facebook.com/marketplace/item/${it.id}/` : '');
+  const url: string = it.itemUrl || it.listingUrl || it.url || it.link || (it.id ? `https://www.facebook.com/marketplace/item/${it.id}/` : '');
   const id = it.id || it.listingId || (url.match(/\/item\/(\d+)/)?.[1]) || url;
   if (!id) return null;
-  const title = it.marketplace_listing_title || it.title || it.name || '';
-  const desc = it.description || it.redacted_description?.text || it.listingDescription || '';
-  const price = it.listing_price?.amount ?? it.price?.amount ?? it.price ?? it.formattedAmount ?? it.salePrice ?? null;
-  const loc = it.location?.reverse_geocode?.city_page?.display_name || it.location?.text || it.locationText || it.location || (it.city ? `${it.city}${it.state ? ', ' + it.state : ''}` : '');
+  if (it.isSold === true) return null;
+  const title = it.listingTitle || it.customTitle || it.marketplace_listing_title || it.title || it.name || '';
+  const desc = typeof it.description === 'string' ? it.description : (it.description?.text || it.redacted_description?.text || it.listingDescription || '');
+  const priceRaw = it.listingPrice ?? it.listing_price ?? it.price;
+  const price = typeof priceRaw === 'object' && priceRaw ? (priceRaw.amount ?? priceRaw.formatted_amount ?? priceRaw.formattedAmount ?? null) : (priceRaw ?? null);
+  const rg = it.location?.reverse_geocode || it.location?.reverseGeocode;
+  const loc = it.locationText?.text || (typeof it.locationText === 'string' ? it.locationText : undefined) || rg?.city_page?.display_name || (rg?.city && rg?.state ? `${rg.city}, ${rg.state}` : undefined) || (typeof it.location === 'string' ? it.location : undefined) || it.location?.text;
   const lat = it.location?.latitude ?? it.latitude ?? null, lng = it.location?.longitude ?? it.longitude ?? null;
   const photos: string[] = [];
-  const pushPhoto = (u: any) => { if (typeof u === 'string' && u.startsWith('http')) photos.push(u); else if (u?.image?.uri) photos.push(u.image.uri); else if (u?.uri) photos.push(u.uri); else if (u?.url) photos.push(u.url); };
-  (it.listing_photos || it.photos || it.images || []).forEach(pushPhoto);
-  if (it.primary_listing_photo?.image?.uri) photos.unshift(it.primary_listing_photo.image.uri);
-  if (it.primaryPhoto) pushPhoto(it.primaryPhoto);
-  const posted = it.creation_time ? new Date(it.creation_time * (it.creation_time < 1e12 ? 1000 : 1)) : (it.listedAt || it.postedAt || it.createdAt || null);
+  const pp = photoUri(it.primaryListingPhoto || it.primary_listing_photo); if (pp) photos.push(pp);
+  for (const p of (it.listingPhotos || it.listing_photos || it.photos || it.images || [])) { const u = photoUri(p); if (u) photos.push(u); }
+  const ts = it.timestamp || it.listedAt || it.postedAt || it.createdAt || null;
+  const posted = it.creation_time ? new Date(it.creation_time * (it.creation_time < 1e12 ? 1000 : 1)) : (ts ? new Date(ts) : null);
   const sellerName = it.marketplace_listing_seller?.name || it.seller?.name || it.sellerName || null;
   const isDealer = it.is_dealership || it.seller?.isDealer || /dealer/i.test(it.seller?.type || '');
   return {
-    source: 'fb', external_id: String(id), url, title, description: desc, price: typeof price === 'string' ? price : price, location: typeof loc === 'string' ? loc : undefined, lat, lng,
-    posted_at: posted, seller_name: sellerName, seller_type: isDealer ? 'dealer' : 'private', // Marketplace private profiles are private owners; dealership pages are flagged
-    contact_url: url, photos: [...new Set(photos)], raw: it,
+    source: 'fb', external_id: String(id), url, title, description: desc, price: typeof price === 'string' ? price : price, location: loc, lat, lng,
+    posted_at: posted && !isNaN(posted.getTime()) ? posted : null, seller_name: sellerName,
+    seller_type: isDealer ? 'dealer' : 'private', // Marketplace listings are personal-profile posts unless flagged as a dealership; the text still gets a say
+    contact_url: url, photos: [...new Set(photos)], raw: { id, timestamp: ts, condition: it.condition, isLive: it.isLive, isPending: it.isPending, searchUrl: it.facebookUrl },
   };
 }

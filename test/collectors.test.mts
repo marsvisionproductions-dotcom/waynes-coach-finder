@@ -63,7 +63,7 @@ test('facebook url set covers the country', () => {
   assert.ok(METROS.length >= 14);
   const u = fbSearchUrl(METROS[0], 'prevost', { radiusMi: 500, minPrice: 100000 });
   assert.match(u, /facebook\.com\/marketplace\/miami\/search\?/); assert.match(u, /sortBy=creation_time_descend/); assert.match(u, /daysSinceListed=1/); assert.match(u, /radius=500/);
-  assert.equal(allFbSearchUrls().length, METROS.length * 10);
+  assert.equal(allFbSearchUrls().length, METROS.length * 8); assert.match(u, /exact=true/);
 });
 
 test('rvtrader alert email parses cards without fetching', async () => {
@@ -84,4 +84,11 @@ test('plain-html page: photos from <img> tags, relative urls resolved, logos ski
   const raw = extractFromHtml('https://prevost-stuff.com/2008PrevostMarathonH_Johns090126.html', html, { title: '2008 Prevost Marathon H3-45' });
   assert.deepEqual(raw.photos, ['https://prevost-stuff.com/2008marathon/pic1.jpg', 'https://prevost-stuff.com/2008marathon/pic2.JPG']);
   const n = normalize(raw); assert.equal(n.contact_phone, '(352) 555-0147'); assert.equal(n.city, 'Ocala'); assert.equal(n.thumb_url, 'https://prevost-stuff.com/2008marathon/pic1.jpg');
+});
+
+test('apify real output shape (verified run)', () => {
+  const it = { id: '2847417762308750', itemUrl: 'https://www.facebook.com/marketplace/item/2847417762308750/', listingTitle: '2008 Prevost H3-45 Marathon', customTitle: '2008 Prevost H3-45 Marathon', description: { text: 'Selling our coach, 118k miles, two slides. Health reasons.' }, listingPrice: { amount: '389000', formatted_amount: '$389,000', currency: 'USD' }, location: { reverse_geocode: { city: 'Ocala', state: 'FL', city_page: { display_name: 'Ocala, FL' } } }, locationText: { text: 'Ocala, FL' }, listingPhotos: [{ __typename: 'Photo', image: { height: 743, width: 960, uri: 'https://scontent.xx.fbcdn.net/a.jpg?x=1' }, id: '1' }], primaryListingPhoto: { image: { uri: 'https://scontent.xx.fbcdn.net/p.jpg?x=1' } }, timestamp: '2026-09-08T17:24:35.000Z', condition: 'USED', isSold: false, facebookUrl: 'https://www.facebook.com/marketplace/houston/search?query=prevost' };
+  const r = mapApifyItem(it)!; const n = normalize(r);
+  assert.equal(n.make, 'Prevost'); assert.equal(n.converter, 'Marathon'); assert.equal(n.price, 389000); assert.equal(n.city, 'Ocala'); assert.equal(n.state, 'FL'); assert.equal(n.photos.length, 2); assert.equal(n.thumb_url, 'https://scontent.xx.fbcdn.net/p.jpg?x=1'); assert.equal(n.seller_type, 'private'); assert.ok(n.posted_at);
+  assert.equal(mapApifyItem({ ...it, isSold: true }), null);
 });

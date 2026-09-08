@@ -94,3 +94,8 @@ test('area code fallback, contact-name capture, in-City-ST, market summary skipp
 });
 
 test('"In Durham, NC" is Durham', () => { assert.deepEqual(parseLocation('In Durham, NC'), { city: 'Durham', state: 'NC' }); });
+
+test('dealer wording overrides a private source hint', () => {
+  assert.equal(detectSellerType({ title: '2014 Prevost H3-45 Liberty', description: 'Pre-owned inventory. Financing available. Trade-ins welcome.', sourceHint: 'private' }), 'dealer');
+  assert.equal(detectSellerType({ title: '2014 Prevost H3-45 Liberty', description: 'Selling my coach, financing available through my bank', sourceHint: 'private' }), 'private');
+});

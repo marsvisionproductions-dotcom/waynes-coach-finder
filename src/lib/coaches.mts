@@ -176,13 +176,13 @@ export function detectSellerType(opts: { title?: string; description?: string; s
   const name = opts.sellerName || '';
   if (KNOWN_DEALER_NAMES.test(name) || KNOWN_DEALER_TITLE.test(opts.title || '')) return 'dealer';
   if (opts.sourceHint === 'dealer') return 'dealer';
+  if (DEALER_RE.test(name)) return 'dealer';
+  // Description written like a dealership ad → dealer, even when the source thinks it's a person (dealer pages post on Marketplace too)
+  const dealerHits = (blob.match(new RegExp(DEALER_RE.source, 'gi')) || []).length;
+  if (dealerHits >= 2 && !PRIVATE_RE.test(blob)) return 'dealer';
   if (BROKER_RE.test(blob)) return 'broker';
   if (opts.sourceHint === 'private') return 'private';
   if (PRIVATE_RE.test(blob)) return 'private';
-  if (DEALER_RE.test(name)) return 'dealer';
-  // Description written like a dealership ad → dealer
-  const dealerHits = (blob.match(DEALER_RE) || []).length;
-  if (dealerHits >= 2) return 'dealer';
   if (dealerHits === 1 && !PRIVATE_RE.test(blob)) return 'unknown';
   return opts.sourceHint || 'unknown';
 }

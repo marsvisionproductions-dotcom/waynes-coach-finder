@@ -23,10 +23,11 @@ export const METROS: Metro[] = [
 ];
 
 // One query per make family. "prevost" alone catches every converter; the converter names catch titles that omit "Prevost".
-export const FB_QUERIES = ['prevost', 'marathon coach', 'liberty coach', 'millennium coach', 'featherlite coach', 'newell coach', 'foretravel', 'tiffin zephyr', 'newmar king aire', 'entegra cornerstone'];
+export const FB_QUERIES = ['prevost', 'newell coach', 'foretravel', 'tiffin zephyr', 'king aire', 'cornerstone', 'marathon coach', 'liberty coach'];
 
 export function fbSearchUrl(metro: Metro, query: string, opts: { radiusMi?: number; minPrice?: number; daysSinceListed?: 1 | 7 | 30 } = {}): string {
-  const p = new URLSearchParams({ query, sortBy: 'creation_time_descend', daysSinceListed: String(opts.daysSinceListed ?? 1), radius: String(opts.radiusMi ?? 500), minPrice: String(opts.minPrice ?? 100000), exact: 'false' });
+  // exact=true: a fuzzy 'prevost' search returns every $100k+ vehicle in the area (Mercedes, Ford…). Exact keeps it to coaches.
+  const p = new URLSearchParams({ query, sortBy: 'creation_time_descend', daysSinceListed: String(opts.daysSinceListed ?? 1), radius: String(opts.radiusMi ?? 500), minPrice: String(opts.minPrice ?? 100000), exact: 'true' });
   return `https://www.facebook.com/marketplace/${metro.slug}/search?${p.toString()}`;
 }
 
