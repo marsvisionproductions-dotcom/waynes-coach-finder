@@ -146,6 +146,15 @@ export default async (req: Request, _ctx: Context) => {
         AND EXISTS (SELECT 1 FROM listing_sources s WHERE s.listing_id = l.id AND s.source = ${source}) RETURNING l.id`;
       return json({ deleted: rows.length });
     }
+    if (path === '/admin/enrich' && req.method === 'POST') { if (!secretOk(req, url)) return bad('unauthorized', 401); const { enrichMissing } = await import('../../src/lib/enrich.mts'); return json(await enrichMissing({ max: +(url.searchParams.get('max') || 25) })); }
+    if (path === '/admin/rescore' && req.method === 'POST') {
+      if (!secretOk(req, url)) return bad('unauthorized', 401);
+      const { score } = await import('../../src/lib/score.mts');
+      const { parseCoach } = await import('../../src/lib/coaches.mts');
+      const rows = await sql`SELECT id, posted_at, first_seen_at, seller_type, price, contact_phone, contact_email, contact_url, dist_mi, title_raw, make, converter FROM listings WHERE stage = 'new'`;
+      for (const r of rows) { const tier = parseCoach([r.title_raw, r.make, r.converter].filter(Boolean).join(' '), { make: r.make, converter: r.converter }).tier; const s = score({ posted_at: r.posted_at, first_seen_at: r.first_seen_at, seller_type: r.seller_type, tier, price: r.price, contact_phone: r.contact_phone, contact_email: r.contact_email, contact_url: r.contact_url, dist_mi: r.dist_mi }); await sql`UPDATE listings SET score = ${s.score}, score_breakdown = ${JSON.stringify(s.breakdown)}::jsonb WHERE id = ${r.id}`; }
+      return json({ rescored: rows.length });
+    }
     if (path === '/runs' && req.method === 'GET') { const rows = await sql`SELECT id, started_at, finished_at, trigger, status, summary FROM runs ORDER BY id DESC LIMIT 20`; return json({ runs: rows }); }
     if (path === '/digest' && req.method === 'GET') { const d = await buildDigest(siteUrl(req)); return new Response(d.html, { headers: { 'content-type': 'text/html; charset=utf-8' } }); }
     if (path === '/digest' && req.method === 'POST') { if (!secretOk(req, url)) return bad('unauthorized', 401); return json(await sendDigest({ siteUrl: siteUrl(req), force: true })); }

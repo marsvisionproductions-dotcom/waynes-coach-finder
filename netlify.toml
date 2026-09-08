@@ -10,3 +10,22 @@
   for = "/*"
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
+
+# Thumbnails are served through Netlify Image CDN (resized + cached) from these listing-photo hosts.
+[images]
+  remote_images = [
+    "https://(www\\.)?prevost-stuff\\.com/.*",
+    "https://(www\\.)?2009prevost\\.com/.*",
+    "https://(www\\.)?prevostrvforsale\\.com/.*",
+    "https://(www\\.)?newellgurus\\.com/.*",
+    "https://(www\\.)?foreforums\\.com/.*",
+    "https://.*\\.fbcdn\\.net/.*",
+    "https://.*\\.ebayimg\\.com/.*",
+    "https://cdn-media\\.tilabs\\.io/.*",
+    "https://.*\\.rvt\\.com/.*",
+    "https://images\\.craigslist\\.org/.*",
+    "https://.*\\.rvusa\\.com/.*",
+    "https://.*\\.rvuniverse\\.com/.*",
+    "https://.*\\.autotrader\\.com/.*",
+    "https://.*\\.apifyusercontent\\.com/.*"
+  ]

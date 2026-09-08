@@ -78,3 +78,10 @@ test('rvtrader alert email parses cards without fetching', async () => {
   const page = `<html><script type="application/ld+json">{"@type":"ItemList","itemListElement":[{"item":{"@type":"Product","name":"2014 Prevost H3-45 Liberty","url":"https://www.rvtrader.com/listing/2014-Prevost-H3-45-Liberty-5031112222","offers":{"price":"775000"},"sellerType":"Private Seller"}}]}</script></html>`;
   const s = parseRvtraderSearch(page); assert.equal(s.length, 1); assert.equal(s[0].external_id, '5031112222'); assert.equal(s[0].seller_type, 'private');
 });
+
+test('plain-html page: photos from <img> tags, relative urls resolved, logos skipped', () => {
+  const html = `<html><body><img src="images/logo.gif" width="80"><img src="2008marathon/pic1.jpg" width="640" height="480"><img src="/2008marathon/pic2.JPG"><img src="https://x.com/spacer.png" width="1" height="1"><p>Call 352-555-0147. Located in Ocala, FL</p></body></html>`;
+  const raw = extractFromHtml('https://prevost-stuff.com/2008PrevostMarathonH_Johns090126.html', html, { title: '2008 Prevost Marathon H3-45' });
+  assert.deepEqual(raw.photos, ['https://prevost-stuff.com/2008marathon/pic1.jpg', 'https://prevost-stuff.com/2008marathon/pic2.JPG']);
+  const n = normalize(raw); assert.equal(n.contact_phone, '(352) 555-0147'); assert.equal(n.city, 'Ocala'); assert.equal(n.thumb_url, 'https://prevost-stuff.com/2008marathon/pic1.jpg');
+});

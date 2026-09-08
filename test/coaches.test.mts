@@ -68,6 +68,7 @@ test('normalize + relevance + dealer gate inputs', () => {
 });
 
 test('score favors fresh private coaches with a phone', () => {
+  assert.equal(score({ seller_type: 'private', tier: 20, first_seen_at: new Date() }).breakdown.freshness, 15);
   const now = new Date('2026-09-08T12:00:00Z');
   const hot = score({ posted_at: new Date('2026-09-07T20:00:00Z'), seller_type: 'private', tier: 20, contact_phone: '(352) 555-0147', dist_mi: 96, now });
   const stale = score({ posted_at: new Date('2026-08-20T20:00:00Z'), seller_type: 'unknown', tier: 12, dist_mi: 2400, now });

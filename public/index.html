@@ -226,7 +226,9 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const title=x=>[x.conv_year,x.make,x.model].filter(Boolean).join(' ')+(x.converter&&x.converter!==x.make?' · '+x.converter:'');
 function coachSvg(seed){ const hues=['#3B4F63','#2B2F3A','#2E3E4C','#26323F','#33393F','#1E2A38']; const p=[hues[seed%hues.length],'#B9C4CE'];
   return `<svg viewBox="0 0 160 120" role="img" aria-label="No photo"><defs><linearGradient id="g${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p[0]}"/><stop offset="1" stop-color="#0f1a24"/></linearGradient></defs><rect width="160" height="120" fill="url(#g${seed})"/><rect x="0" y="84" width="160" height="36" fill="#0b131b"/><path d="M14 78 V46 q0-10 10-10 h104 q12 0 14 12 V78 z" fill="${p[1]}" opacity=".8"/><rect x="24" y="44" width="92" height="16" rx="2" fill="#0f1a24" opacity=".85"/><circle cx="40" cy="80" r="8" fill="#0b131b"/><circle cx="116" cy="80" r="8" fill="#0b131b"/></svg>`; }
-const photo=(u,seed)=>u?`<img src="${esc(u)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:coachSvg(${seed})}).firstChild)">`:coachSvg(seed);
+const cdn=(u,w)=>`/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&fit=cover&q=75`;
+// Try the Image CDN first (resized, cached); if that host isn't allowed fall back to the original; if that fails, a placeholder.
+const photo=(u,seed,w=480)=>u?`<img src="${cdn(u,w)}" data-orig="${esc(u)}" alt="" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=this.dataset.orig}else{this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:coachSvg(${seed})}).firstChild)}">`:coachSvg(seed);
 
 // ---------- filtering (client-side within the stage) ----------
 function visible(){

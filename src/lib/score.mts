@@ -19,8 +19,9 @@ export function score(i: ScoreInput): { score: number; breakdown: Record<string,
   const posted = i.posted_at ? new Date(i.posted_at) : (i.first_seen_at ? new Date(i.first_seen_at) : now);
   const ageDays = Math.max(0, (now.getTime() - posted.getTime()) / 864e5);
 
-  // Freshness 30: full under 24h, linear to 0 at 14 days
-  const fresh = ageDays <= 1 ? 30 : Math.max(0, Math.round(30 * (1 - (ageDays - 1) / 13)));
+  // Freshness 30: full under 24h, linear to 0 at 14 days. No post date at all → half credit (we only know when we first saw it).
+  let fresh = ageDays <= 1 ? 30 : Math.max(0, Math.round(30 * (1 - (ageDays - 1) / 13)));
+  if (!i.posted_at) fresh = Math.min(fresh, 15);
 
   // Seller 25: private 25, broker 8, unknown 12, dealer 0 (dealers are filtered out before this anyway)
   const seller = ({ private: 25, broker: 8, unknown: 12, dealer: 0 } as Record<string, number>)[i.seller_type] ?? 12;

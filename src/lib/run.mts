@@ -8,6 +8,7 @@ import { collectRvusa } from '../collectors/rvusa.mts';
 import { startFacebookRun } from '../collectors/apify.mts';
 import { collectRvtrader } from '../collectors/rvtrader.mts';
 import { sendDigest } from './digest.mts';
+import { enrichMissing } from './enrich.mts';
 
 export interface RunSummary { runId: number; started: string; finished?: string; sources: Record<string, any>; totals: Partial<IngestResult>; gone: number; digest?: any; errors: string[] }
 
@@ -43,6 +44,8 @@ export async function runAll(opts: { trigger: string; siteUrl: string; facebook?
       summary.sources.fb = 'skipped' in r ? { skipped: r.skipped } : { started: r.runId, urls: r.urls, note: 'results arrive by webhook when the Apify run finishes' };
     } catch (e: any) { summary.sources.fb = { error: e.message }; summary.errors.push(`fb: ${e.message}`); }
   }
+
+  if (want('enrich')) { try { summary.sources.enrich = await enrichMissing({ max: 40 }); } catch (e: any) { summary.sources.enrich = { error: e.message }; summary.errors.push(`enrich: ${e.message}`); } }
 
   try { summary.gone = await sweepGone(3); } catch (e: any) { summary.errors.push(`sweep: ${e.message}`); }
 

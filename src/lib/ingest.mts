@@ -31,7 +31,8 @@ export async function ingest(raws: RawListing[], opts: { allowDealers?: boolean 
     }
 
     const median = await comparableMedian(n);
-    const s = score({ posted_at: n.posted_at ?? null, seller_type: n.seller_type, tier: n.tier, price: n.price ?? null, median_price: median, contact_phone: n.contact_phone, contact_email: n.contact_email, contact_url: n.contact_url, dist_mi: n.dist_mi ?? null });
+    const knownPosted = listingId ? (await sql`SELECT posted_at, first_seen_at FROM listings WHERE id = ${listingId}`)[0] : null;
+    const s = score({ posted_at: n.posted_at ?? knownPosted?.posted_at ?? null, first_seen_at: knownPosted?.first_seen_at ?? null, seller_type: n.seller_type, tier: n.tier, price: n.price ?? null, median_price: median, contact_phone: n.contact_phone, contact_email: n.contact_email, contact_url: n.contact_url, dist_mi: n.dist_mi ?? null });
 
     if (!listingId) {
       isNew = true;

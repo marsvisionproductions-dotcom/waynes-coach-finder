@@ -35,6 +35,8 @@ function jsonLd(html: string): any[] {
   return out;
 }
 
+function absUrl(u: string, base: string): string { try { return new URL(u, base).href; } catch { return u; } }
+
 export function extractFromHtml(url: string, html: string, hints: Partial<RawListing> = {}): RawListing {
   const source = hints.source || sourceFromUrl(url);
   const ld = jsonLd(html);
@@ -43,7 +45,20 @@ export function extractFromHtml(url: string, html: string, hints: Partial<RawLis
   const title = hints.title || prod?.name || meta(html, 'og:title') || decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').trim();
   const desc = hints.description || prod?.description || meta(html, 'og:description') || meta(html, 'description') || '';
   const price = hints.price ?? offer?.price ?? meta(html, 'product:price:amount') ?? (desc.match(/\$\s?[\d,]{5,}/)?.[0]) ?? (title.match(/\$\s?[\d,]{5,}/)?.[0]) ?? null;
-  const images = [meta(html, 'og:image'), ...(Array.isArray(prod?.image) ? prod.image : prod?.image ? [prod.image] : [])].filter(Boolean) as string[];
+  let images = [meta(html, 'og:image'), ...(Array.isArray(prod?.image) ? prod.image : prod?.image ? [prod.image] : [])].filter(Boolean) as string[];
+  images = images.map(u => absUrl(u, url));
+  // Plain-HTML sites (Prevost-Stuff, forums): take the page's own photos, skipping logos/icons/ads.
+  if (images.length < 2) {
+    const seenImg = new Set(images);
+    for (const m of html.matchAll(/<img\b[^>]*\bsrc=["']([^"']+\.(?:jpe?g|webp|png)(?:\?[^"']*)?)["'][^>]*>/gi)) {
+      const src = absUrl(decodeEntities(m[1]), url); const tag = m[0];
+      if (/logo|icon|banner|button|spacer|pixel|avatar|badge|sprite|arrow|bullet|smilie|smiley|emoji|paypal|visa|facebook|twitter|doubleclick|\/ads?\//i.test(src + ' ' + tag)) continue;
+      const w = +(tag.match(/\bwidth=["']?(\d+)/i)?.[1] || 0), h = +(tag.match(/\bheight=["']?(\d+)/i)?.[1] || 0);
+      if ((w && w < 120) || (h && h < 90)) continue;
+      if (!seenImg.has(src)) { seenImg.add(src); images.push(src); }
+      if (images.length >= 16) break;
+    }
+  }
   // Body text for phone / mileage / slides / seller-type detection (trimmed so we don't store a whole site nav)
   const body = stripTags(html.replace(/<head[\s\S]*?<\/head>|<nav[\s\S]*?<\/nav>|<header[\s\S]*?<\/header>|<footer[\s\S]*?<\/footer>/gi, '')).slice(0, 6000);
   const locMeta = meta(html, 'og:locality') || meta(html, 'place:location') || undefined;
