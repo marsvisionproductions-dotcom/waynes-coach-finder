@@ -4,6 +4,7 @@ import { ingest } from '../../src/lib/ingest.mts';
 import { collectPage } from '../../src/collectors/page.mts';
 import { buildDigest, sendDigest } from '../../src/lib/digest.mts';
 import type { RawListing } from '../../src/lib/schema.mts';
+import { distanceFromHome } from '../../src/lib/geo.mts';
 
 const STAGES = ['new', 'contacted', 'talking', 'won', 'lost'];
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -24,8 +25,9 @@ export default async (req: Request, _ctx: Context) => {
     // ---- health / stats ----
     if (path === '/health') { const [r] = await sql`SELECT count(*)::int AS n FROM listings`; return json({ ok: true, listings: r.n, time: new Date().toISOString() }); }
     if (path === '/stats' && req.method === 'GET') {
-      const counts = await sql`SELECT stage, count(*)::int AS n FROM listings WHERE seller_type <> 'dealer' GROUP BY stage`;
-      const [fresh] = await sql`SELECT count(*)::int AS n FROM listings WHERE stage = 'new' AND seller_type <> 'dealer' AND first_seen_at > now() - interval '26 hours'`;
+      const brokers = url.searchParams.get('brokers') === '1';
+      const counts = await sql`SELECT stage, count(*)::int AS n FROM listings WHERE seller_type <> 'dealer' AND (${brokers} OR seller_type <> 'broker') GROUP BY stage`;
+      const [fresh] = await sql`SELECT count(*)::int AS n FROM listings WHERE stage = 'new' AND seller_type <> 'dealer' AND (${brokers} OR seller_type <> 'broker') AND first_seen_at > now() - interval '26 hours'`;
       const [due] = await sql`SELECT count(*)::int AS n FROM listings WHERE stage IN ('contacted','talking') AND followup_on IS NOT NULL AND followup_on <= CURRENT_DATE`;
       const dueBy = await sql`SELECT stage, count(*)::int AS n FROM listings WHERE stage IN ('contacted','talking') AND followup_on IS NOT NULL AND followup_on <= CURRENT_DATE GROUP BY stage`;
       const [lastRun] = await sql`SELECT id, started_at, finished_at, status, summary FROM runs ORDER BY id DESC LIMIT 1`;
@@ -80,11 +82,13 @@ export default async (req: Request, _ctx: Context) => {
       const fields = ['make', 'model', 'converter', 'shell_year', 'conv_year', 'slides', 'mileage', 'price', 'city', 'state', 'seller_name', 'contact_phone', 'contact_email'] as const;
       const set: Record<string, any> = {};
       for (const f of fields) if (body[f] !== undefined) set[f] = body[f] === '' ? null : body[f];
+      const newCity = set.city ?? cur.city, newState = set.state ?? cur.state;
+      const dist = (set.city !== undefined || set.state !== undefined) ? (distanceFromHome(newCity, newState) ?? null) : cur.dist_mi;
       await sql`UPDATE listings SET stage = ${stage}, lost_reason = ${lost_reason}, followup_on = ${followup_on}, our_number = ${our_number}, favorite = ${favorite},
         make = ${set.make ?? cur.make}, model = ${set.model ?? cur.model}, converter = ${set.converter ?? cur.converter}, shell_year = ${set.shell_year ?? cur.shell_year}, conv_year = ${set.conv_year ?? cur.conv_year},
         slides = ${set.slides ?? cur.slides}, mileage = ${set.mileage ?? cur.mileage}, price = ${set.price ?? cur.price}, city = ${set.city ?? cur.city}, state = ${set.state ?? cur.state},
         seller_name = ${set.seller_name ?? cur.seller_name}, contact_phone = ${set.contact_phone ?? cur.contact_phone}, contact_email = ${set.contact_email ?? cur.contact_email},
-        updated_at = now() WHERE id = ${id}`;
+        dist_mi = ${dist}, updated_at = now() WHERE id = ${id}`;
       for (const e of events) { const [kind, ...rest] = e.split(':'); await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, ${kind}, ${rest.join(':')})`; }
       if (body.contact_event) await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, 'contact', ${String(body.contact_event).slice(0, 300)})`;
       const [l] = await sql`SELECT * FROM listings WHERE id = ${id}`;

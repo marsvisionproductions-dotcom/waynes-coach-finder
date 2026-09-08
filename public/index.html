@@ -137,6 +137,19 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 .ev.system .what{color:var(--ink-3)}
 .noteadd{display:flex;gap:.4rem;margin-top:.4rem}
 .noteadd input{flex:1;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.4rem .6rem;font:inherit;font-size:.82rem}
+.gallery .g{cursor:zoom-in}
+.gallery .more{position:absolute;right:.4rem;bottom:.4rem;background:rgba(15,26,36,.85);color:var(--ink);font-size:.72rem;font-weight:600;padding:.15rem .5rem;border-radius:5px}
+.gallery{position:relative}
+.lb{position:fixed;inset:0;background:rgba(6,12,18,.94);z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;padding:1rem}
+.lb.open{display:flex}
+.lb img.main{max-width:min(96vw,1400px);max-height:78vh;object-fit:contain;border-radius:8px;background:#0f1a24}
+.lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:rgba(30,51,70,.9);color:var(--ink);font-size:1.4rem;display:grid;place-items:center;border:1px solid var(--line-2)}
+.lb .prev{left:1rem}.lb .next{right:1rem}
+.lb .close{position:absolute;top:1rem;right:1rem;width:40px;height:40px;border-radius:8px;background:rgba(30,51,70,.9);color:var(--ink);font-size:1.1rem;display:grid;place-items:center;border:1px solid var(--line-2)}
+.lb .cap{color:var(--ink-2);font-size:.82rem}
+.lb .strip{display:flex;gap:.35rem;overflow-x:auto;max-width:96vw;padding:.2rem}
+.lb .strip img{height:56px;width:76px;object-fit:cover;border-radius:5px;opacity:.55;cursor:pointer;flex:none;border:2px solid transparent}
+.lb .strip img.on{opacity:1;border-color:var(--brass)}
 .toast{position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--shell);padding:.5rem .6rem .5rem .9rem;border-radius:8px;font-size:.82rem;font-weight:500;opacity:0;pointer-events:none;transition:all .18s;display:flex;gap:.6rem;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:20;max-width:92vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
 .toast button{background:var(--brass);color:var(--brass-ink);padding:.2rem .55rem;border-radius:5px;font-size:.76rem;font-weight:600}
@@ -187,6 +200,7 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
   <div id="view"><div class="skeleton"></div></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="lb" id="lb" onclick="if(event.target.id==='lb')closeLightbox()"><button class="close" onclick="closeLightbox()" aria-label="Close">✕</button><button class="nav prev" onclick="lbStep(-1)" aria-label="Previous">‹</button><img class="main" id="lbImg" alt=""><button class="nav next" onclick="lbStep(1)" aria-label="Next">›</button><div class="cap" id="lbCap"></div><div class="strip" id="lbStrip"></div></div>
 
 <div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
 
@@ -197,7 +211,7 @@ const STAGES={new:'New',contacted:'Contacted',talking:'Talking',won:'Won',lost:'
 const ORDER=['new','contacted','talking','won','lost'];
 const NEXT={ new:[['contacted','Contacted','good'],['lost','Lost','bad']], contacted:[['talking','They replied','good'],['lost','Lost','bad']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
 const SOURCE_NAMES={fb:'Facebook Marketplace',fbgroup:'Facebook group',ebay:'eBay Motors',rvt:'RVT.com',rvtrader:'RVTrader',prevoststuff:'Prevost-Stuff',craigslist:'Craigslist',newellgurus:'NewellGurus',foreforums:'ForeForums',prevostrvforsale:'PrevostRVForSale',rvusa:'RVUSA',rvuniverse:'RVUniverse',autotrader:'Autotrader',capture:'Captured',manual:'Added by hand'};
-const ME={name:'Wayne',phone:'',company:'The Motorcoach Store',city:'Bradenton'};
+const ME={name:'Wayne',full:'Wayne Harris',phone:'941-877-5624',email:'wayne@themotorcoachstore.com',company:'The Motorcoach Store',city:'Bradenton, FL'};
 const S={tab:'new',open:null,q:'',makes:new Set(),favOnly:false,brokers:false,sort:'score',showFilters:false,tone:'text',draftText:null,draftFor:null,qr:false,stats:null,rows:[],detail:{},loading:false};
 
 // ---------- api ----------
@@ -207,7 +221,7 @@ async function api(path,opts={}){
   if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
   return j;
 }
-async function loadStats(){ S.stats=await api('/stats'); if(S.stats.buyer){Object.assign(ME,S.stats.buyer);document.getElementById('userInitial').textContent=(ME.name||'W')[0];} renderSub(); renderTabs(); }
+async function loadStats(){ S.stats=await api(`/stats?brokers=${S.brokers?1:0}`); if(S.stats.buyer){Object.assign(ME,S.stats.buyer);document.getElementById('userInitial').textContent=(ME.name||'W')[0];} renderSub(); renderTabs(); }
 async function loadRows(){ S.loading=true; renderView(); const j=await api(`/listings?stage=${S.tab}&brokers=${S.brokers?1:0}`); S.rows=j.listings.map(fixIds); S.loading=false; renderView(); }
 // Postgres bigints arrive as strings; the UI compares ids as numbers.
 const fixIds=l=>({...l,id:Number(l.id),score:l.score==null?null:Number(l.score),price:l.price==null?null:Number(l.price),our_number:l.our_number==null?null:Number(l.our_number),dist_mi:l.dist_mi==null?null:Number(l.dist_mi),mileage:l.mileage==null?null:Number(l.mileage),slides:l.slides==null?null:Number(l.slides),conv_year:l.conv_year==null?null:Number(l.conv_year),photo_count:l.photo_count==null?null:Number(l.photo_count)});
@@ -220,7 +234,7 @@ const NOW=()=>new Date();
 const postedDate=x=>new Date(x.posted_at||x.first_seen_at);
 const daysOn=x=>Math.max(0,Math.floor((NOW()-postedDate(x))/864e5));
 function ago(x){const h=Math.floor((NOW()-postedDate(x))/36e5); if(h<1)return 'just now'; if(h<24)return h+' h ago'; const dd=Math.floor(h/24); return dd===1?'yesterday':dd+' days ago';}
-const fmtDay=t=>new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const fmtDay=t=>{ const m=String(t).match(/^(\d{4})-(\d{2})-(\d{2})/); const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(t); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
 const fmtWhen=t=>new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric'});
 const todayIso=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
 function dueState(x){ if(!x.followup_on||!['contacted','talking'].includes(x.stage))return null; const f=String(x.followup_on).slice(0,10), t=todayIso(); return f<t?'overdue':f===t?'today':'later'; }
@@ -238,7 +252,7 @@ function visible(){
   if(S.makes.size) a=a.filter(x=>S.makes.has(x.make));
   if(S.favOnly) a=a.filter(x=>x.favorite);
   if(S.q){const q=S.q.toLowerCase(); a=a.filter(x=>[x.make,x.model,x.converter,x.city,x.state,x.seller_name,x.title_raw].join(' ').toLowerCase().includes(q));}
-  const f={score:(p,q)=>(q.score||0)-(p.score||0),newest:(p,q)=>postedDate(q)-postedDate(p),price:(p,q)=>(p.price||0)-(q.price||0),dist:(p,q)=>(p.dist_mi??1e9)-(q.dist_mi??1e9)}[S.sort];
+  const f={score:(p,q)=>(q.score||0)-(p.score||0),newest:(p,q)=>postedDate(q)-postedDate(p),price:(p,q)=>(p.price??1e12)-(q.price??1e12),dist:(p,q)=>(p.dist_mi??1e9)-(q.dist_mi??1e9)}[S.sort];
   a.sort(f);
   if(['contacted','talking'].includes(S.tab)){ const rank=x=>({overdue:0,today:1,later:2}[dueState(x)]??3); a.sort((p,q)=>rank(p)-rank(q)); }
   if(S.tab==='new') a.sort((p,q)=>(q.favorite?1:0)-(p.favorite?1:0));
@@ -284,7 +298,7 @@ function rowHtml(x){
   const tag=x.stage==='new'&&dom<=1?'<span class="tag">New</span>':isCapture&&x.stage==='new'?'<span class="tag plain">Captured</span>':'';
   const duePill=due?` · <span class="pill ${due==='overdue'?'bad':due==='today'?'warn':'neutral'}">${due==='overdue'?'Follow up · overdue':due==='today'?'Follow up today':'Follow up '+fmtDay(x.followup_on)}</span>`:'';
   const last=x.last_event?`${esc(x.last_event.body)} · ${fmtDay(x.last_event.at)}`:'';
-  const statusLine = x.stage==='new' ? `Posted <b>${ago(x)}</b> · <b class="num">${dom}</b> day${dom===1?'':'s'} on market`
+  const statusLine = x.stage==='new' ? (x.posted_at ? `Posted <b>${ago(x)}</b> · <b class="num">${dom}</b> day${dom===1?'':'s'} on market` : `Found <b>${ago(x)}</b> · listing date unknown`)
     : x.stage==='contacted' ? `${last}${duePill}` : x.stage==='talking' ? `${last}${x.our_number?` · our number <b>${money(x.our_number)}</b>`:''}${duePill}`
     : x.stage==='won' ? `<span class="pill good">Bought ${money(x.our_number||x.price)}</span> · ${last}` : `<span class="pill bad">${x.lost_reason==='gone'?'Gone from all sources':'Passed'}</span> · ${last}`;
   const srcs=(x.sources||[]).map(s=>`<span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
@@ -294,7 +308,7 @@ function rowHtml(x){
       <div class="thumb">${photo(x.thumb_url,x.id)}${tag}</div>
       <div class="body">
         <div class="title">${esc(title(x))||esc(x.title_raw||'Untitled coach')}${sellerPill}</div>
-        <div class="l1">${x.mileage?`<span><b class="num">${Number(x.mileage).toLocaleString()}</b> mi</span>`:''}${x.slides!=null?`<span><b class="num">${x.slides}</b> slides</span>`:''}<span>${esc([x.city,x.state].filter(Boolean).join(', ')||'Location unknown')}${x.dist_mi!=null?` · <b class="num">${Number(x.dist_mi).toLocaleString()}</b> mi`:''}</span><span>${esc(x.seller_name||'Seller')} · ${reach}</span></div>
+        <div class="l1">${x.mileage?`<span><b class="num">${Number(x.mileage).toLocaleString()}</b> mi</span>`:''}${x.slides!=null?`<span><b class="num">${x.slides}</b> slide${x.slides===1?'':'s'}</span>`:''}<span>${esc([x.city,x.state].filter(Boolean).join(', ')||'Location unknown')}${x.dist_mi!=null?` · <b class="num">${Number(x.dist_mi).toLocaleString()}</b> mi`:''}</span><span>${esc(x.seller_name||'Seller')} · ${reach}</span></div>
         <div class="l2">${statusLine}${x.stage==='new'?srcs:''}</div>
       </div>
       <div class="side">
@@ -311,8 +325,8 @@ function detailHtml(x){
   const sources=d?d.sources:(x.sources||[]); const events=d?d.events:null;
   return `
    <div>
-    <div class="sec"><div class="gallery"><div class="g">${photo(photos[0]||x.thumb_url,x.id)}</div><div class="g">${photo(photos[1],x.id+1)}</div><div class="g">${photo(photos[2],x.id+2)}</div></div></div>
-    <div class="sec"><h3>Listing <span style="font-weight:400;letter-spacing:0;text-transform:none">${(x.photo_count||photos.length)} photo${(x.photo_count||photos.length)===1?"":"s"} · score ${x.score??'–'}</span></h3><div class="desc">${esc(x.description||x.title_raw||'')}</div>
+    <div class="sec"><div class="gallery" onclick="openLightbox(${x.id},0)"><div class="g">${photo(photos[0]||x.thumb_url,x.id)}</div><div class="g" onclick="event.stopPropagation();openLightbox(${x.id},1)">${photo(photos[1],x.id+1)}</div><div class="g" onclick="event.stopPropagation();openLightbox(${x.id},2)">${photo(photos[2],x.id+2)}</div>${photos.length>3?`<span class="more">+${photos.length-3} more</span>`:''}</div></div>
+    <div class="sec"><h3>Listing <span style="font-weight:400;letter-spacing:0;text-transform:none">${(x.photo_count||photos.length)} photo${(x.photo_count||photos.length)===1?"":"s"} · score ${x.score??'–'}</span></h3><div class="desc">${esc(cleanDesc(x.description||x.title_raw||''))}</div>
       <dl class="kv"><dt>Title as posted</dt><dd style="font-weight:400;color:var(--ink-2)">${esc(x.title_raw||'')}</dd>
         <dt>Make / model</dt><dd><input value="${esc([x.make,x.model].filter(Boolean).join(' '))}" onchange="fix(${x.id},'makemodel',this.value)"></dd>
         <dt>Converter</dt><dd><input value="${esc(x.converter||'')}" onchange="fix(${x.id},'converter',this.value)"></dd>
@@ -352,17 +366,25 @@ function detailHtml(x){
 }
 
 // ---------- drafts + links ----------
+function cleanDesc(s){ return String(s).replace(/^(?:The Largest Selection of Prevost Coaches For Sale\s*ANYWHERE\s*(?:Menu)?\s*)/i,'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
+function coachName(x){ return [x.conv_year, x.converter&&x.converter!==x.make?x.converter:x.make, x.model].filter(Boolean).join(' ') || (x.title_raw||'coach'); }
+function seenOn(x){ const s=(x.sources||[])[0]?.source; return s?(SOURCE_NAMES[s]||s):''; }
 function draft(x,tone){
-  const first=(x.seller_name||'').split(' ')[0].replace(/[^A-Za-z]/g,'')||'there';
-  const coach=title(x)||x.title_raw||'coach'; const hook=x.slides>=2?`with the ${x.slides===2?'two':x.slides} slides`:''; const me=ME.name, co=ME.company||'The Motorcoach Store', city=(ME.city||'Bradenton').replace(/,.*$/,'');
+  const first=(x.seller_name||'').split(' ')[0].replace(/[^A-Za-z]/g,'');
+  const hello=first?`Hello ${first}, this is`:'Hello, this is';
+  const coach=coachName(x); const where=seenOn(x); const saw=`I saw your ${coach}${where?` listed on ${where}`:''}.`;
+  const sig=`Thank you,\n${ME.full||'Wayne Harris'}`;
+  const phone=ME.phone||'941-877-5624', email=ME.email||'wayne@themotorcoachstore.com';
+  // Wayne's own opener, word for word, with the coach named so it reads like a person wrote it.
+  const body=`${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'} in ${ME.city||'Bradenton, FL'}. ${saw} We specialize in buying High-Quality Class A coaches like yours. We purchase on the wholesale market for our inventory. If you’d ever consider a private, easy sale without listing hassles, I’d love to talk. Please feel free to call ${phone} or email ${email}`;
   if(x.stage==='contacted'){
-    if(tone==='text') return `Hi ${first}, ${me} again from ${co}. Still interested in your ${coach} if it's available — happy to make a cash offer this week. Any time good for a quick call?`;
-    if(tone==='email') return `Subject: Following up on your ${coach}\n\nHi ${first},\n\nJust following up on my note about your ${coach}. If it's still available I'd like to make you a straightforward cash offer this week — we handle the title work and pickup, funds before the coach moves.\n\nThanks,\n${me}\n${co} · ${city}, FL${ME.phone?'\n'+ME.phone:''}`;
-    return `Hi ${first}, ${me} at ${co} in ${city}, following up on your ${coach}. Still very interested and can make a cash offer this week. Call me back any time at this number. Thanks.`;
+    if(tone==='text') return `${hello.replace('this is','')}${ME.name||'Wayne'} again from ${ME.company||'The Motorcoach Store'}. Still interested in your ${coach} if it’s available — happy to make a private, easy offer this week. Feel free to call ${phone}. ${sig.replace('\n',' ')}`;
+    if(tone==='email') return `Subject: Following up on your ${coach}\n\n${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'}, following up on my note about your ${coach}. If it’s still available I’d like to make you a straightforward wholesale cash offer — we handle the title work and pickup. Please feel free to call ${phone} or email ${email}\n\n${sig}`;
+    return `${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'} in ${ME.city||'Bradenton, FL'}, following up on your ${coach}. Still very interested and can make a private, easy offer this week. Please call me back at ${phone}. Thank you.`;
   }
-  if(tone==='text') return `Hi ${first} — ${me} at ${co} in ${city}. Saw your ${coach} ${hook} come up ${ago(x)==='just now'?'this morning':ago(x)}. We buy coaches like this outright, cash, nationwide pickup. Is it still available, and would you be open to a quick call today?`;
-  if(tone==='email') return `Subject: Your ${coach}\n\nHi ${first},\n\nI'm ${me} with ${co} in ${city}, FL. I came across your ${coach} ${hook} and it's exactly the kind of coach we buy directly from owners — no consignment, no waiting. We make a cash offer, handle the title work digitally, and pick up nationwide, with funds and any payoff completed before the coach moves.\n\nIf it's still available, could you tell me a little about the service history? Happy to talk whenever suits you.\n\nThanks,\n${me}\n${co} · ${city}, FL${ME.phone?'\n'+ME.phone:''}`;
-  return `Hi ${first}, this is ${me} at ${co} in ${city}, Florida. I'm calling about your ${coach} ${hook} — we buy coaches like yours directly from owners, cash, and pick up anywhere in the country. If it's still available I'd love five minutes to talk. You can reach me back at this number any time. Thanks, ${first}.`;
+  if(tone==='text') return `${body} ${sig.replace('\n',' ')}`;
+  if(tone==='email') return `Subject: Your ${coach}\n\n${body}\n\n${sig}`;
+  return `${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'} in ${ME.city||'Bradenton, FL'}. ${saw} We specialize in buying high-quality Class A coaches like yours, and we buy for our own inventory. If you’d ever consider a private, easy sale without the listing hassles, I’d love to talk. You can reach me at ${phone}. Thank you.`;
 }
 const telDigits=p=>'+1'+String(p).replace(/\D/g,'').replace(/^1(\d{10})$/,'$1');
 function currentText(x){ return (S.draftFor===x.id&&S.draftText!=null&&S.tone==='text')?S.draftText:draft(x,'text'); }
@@ -395,8 +417,16 @@ async function fix(id,field,value){
   await patch(id,body);
 }
 function copyDraft(id){const t=document.getElementById('draft'+id); try{navigator.clipboard&&navigator.clipboard.writeText(t.value);}catch(e){} toast('Copied');}
-async function runNow(){ const b=document.getElementById('runBtn'); b.disabled=true; try{ const j=await api('/run',{method:'POST',body:{}}); toast(j.started?'Run started — new coaches land in New over the next few minutes':'Run did not start ('+j.status+')'); setTimeout(refresh,45000); }catch(e){ toast(e.message); } finally{ b.disabled=false; } }
+async function runNow(){ const b=document.getElementById('runBtn'); b.disabled=true; try{ const j=await api('/run',{method:'POST',body:{facebook:false}}); toast(j.started?'Checking the free sources now — new coaches land in New over the next few minutes (Facebook runs on the 6 am schedule)':'Run did not start ('+j.status+')'); setTimeout(refresh,45000); }catch(e){ toast(e.message); } finally{ b.disabled=false; } }
 let tt; function toast(m,undo){const t=document.getElementById('toast');t.innerHTML=esc(m)+(undo?'<button id="undo">Undo</button>':'');if(undo)document.getElementById('undo').onclick=()=>{undo();t.classList.remove('show');};t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),undo?6000:2600);}
+
+// ---------- photo lightbox ----------
+const LB={photos:[],i:0};
+function openLightbox(id,i){ const x=S.rows.find(r=>r.id===id); const ps=(Array.isArray(x?.photos)&&x.photos.length?x.photos:(x?.thumb_url?[x.thumb_url]:[])); if(!ps.length) return; LB.photos=ps; LB.i=Math.min(i,ps.length-1); document.getElementById('lbStrip').innerHTML=ps.map((u,k)=>`<img src="${cdn(u,160)}" onerror="this.src=this.dataset.o" data-o="${esc(u)}" onclick="event.stopPropagation();lbShow(${k})" alt="">`).join(''); lbShow(LB.i); document.getElementById('lb').classList.add('open'); }
+function lbShow(k){ LB.i=(k+LB.photos.length)%LB.photos.length; const u=LB.photos[LB.i]; const img=document.getElementById('lbImg'); img.onerror=()=>{ if(img.src!==u) img.src=u; }; img.src=cdn(u,1400); document.getElementById('lbCap').textContent=`${LB.i+1} / ${LB.photos.length}`; document.querySelectorAll('#lbStrip img').forEach((e,j)=>e.classList.toggle('on',j===LB.i)); document.querySelectorAll('#lbStrip img')[LB.i]?.scrollIntoView({inline:'center',block:'nearest'}); }
+function lbStep(d){ lbShow(LB.i+d); }
+function closeLightbox(){ document.getElementById('lb').classList.remove('open'); }
+document.addEventListener('keydown',e=>{ if(!document.getElementById('lb').classList.contains('open')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowRight') lbStep(1); if(e.key==='ArrowLeft') lbStep(-1); });
 
 // ---------- modals: capture bookmarklet + add by hand ----------
 function openModal(kind){
