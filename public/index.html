@@ -208,8 +208,10 @@ async function api(path,opts={}){
   return j;
 }
 async function loadStats(){ S.stats=await api('/stats'); if(S.stats.buyer){Object.assign(ME,S.stats.buyer);document.getElementById('userInitial').textContent=(ME.name||'W')[0];} renderSub(); renderTabs(); }
-async function loadRows(){ S.loading=true; renderView(); const j=await api(`/listings?stage=${S.tab}&brokers=${S.brokers?1:0}`); S.rows=j.listings; S.loading=false; renderView(); }
-async function loadDetail(id){ const j=await api(`/listings/${id}`); S.detail[id]=j; const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; renderView(); }
+async function loadRows(){ S.loading=true; renderView(); const j=await api(`/listings?stage=${S.tab}&brokers=${S.brokers?1:0}`); S.rows=j.listings.map(fixIds); S.loading=false; renderView(); }
+// Postgres bigints arrive as strings; the UI compares ids as numbers.
+const fixIds=l=>({...l,id:Number(l.id),score:l.score==null?null:Number(l.score),price:l.price==null?null:Number(l.price),our_number:l.our_number==null?null:Number(l.our_number),dist_mi:l.dist_mi==null?null:Number(l.dist_mi),mileage:l.mileage==null?null:Number(l.mileage),slides:l.slides==null?null:Number(l.slides),conv_year:l.conv_year==null?null:Number(l.conv_year),photo_count:l.photo_count==null?null:Number(l.photo_count)});
+async function loadDetail(id){ const j=await api(`/listings/${id}`); j.listing=fixIds(j.listing); S.detail[id]=j; const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; renderView(); }
 async function refresh(){ try{ await Promise.all([loadStats(),loadRows()]); }catch(e){ toast('Could not load: '+e.message); } }
 
 // ---------- helpers ----------
@@ -372,7 +374,7 @@ function drawQr(x){ const el=document.getElementById('qr'+x.id); if(!el) return;
 // ---------- actions ----------
 async function setTab(k){S.tab=k;S.open=null;S.qr=false;renderTabs();await loadRows();}
 function toggle(id){ S.open=S.open===id?null:id; S.draftText=null; S.qr=false; renderView(); if(S.open){ if(!S.detail[id]) loadDetail(id).catch(e=>toast(e.message)); const el=document.getElementById('row'+id); if(el&&el.getBoundingClientRect().top<60) el.scrollIntoView({block:'start'}); } }
-async function patch(id,body){ try{ const j=await api(`/listings/${id}`,{method:'PATCH',body}); const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; delete S.detail[id]; if(S.open===id) loadDetail(id); renderView(); return j.listing; }catch(e){ toast('Save failed: '+e.message); } }
+async function patch(id,body){ try{ const j=await api(`/listings/${id}`,{method:'PATCH',body}); j.listing=fixIds(j.listing); const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; delete S.detail[id]; if(S.open===id) loadDetail(id); renderView(); return j.listing; }catch(e){ toast('Save failed: '+e.message); } }
 async function toggleFav(id){ const x=S.rows.find(y=>y.id===id); await patch(id,{favorite:!x.favorite}); }
 let last=null;
 async function move(id,to,silent){
@@ -425,7 +427,7 @@ async function addManual(){ const g=id=>document.getElementById(id).value.trim()
 (async()=>{
   renderFilters();
   await refresh();
-  const m=location.hash.match(/#l=(\d+)/); if(m){ const id=+m[1]; try{ const j=await api(`/listings/${id}`); if(j.listing.stage!==S.tab){ S.tab=j.listing.stage; renderTabs(); await loadRows(); } toggle(id); }catch{} }
+  const m=location.hash.match(/#l=(\d+)/); if(m){ const id=+m[1]; try{ const j=await api(`/listings/${id}`); j.listing=fixIds(j.listing); if(j.listing.stage!==S.tab){ S.tab=j.listing.stage; renderTabs(); await loadRows(); } toggle(id); }catch{} }
   setInterval(()=>{ if(document.visibilityState==='visible') loadStats().catch(()=>{}); }, 120000);
 })();
 </script>
