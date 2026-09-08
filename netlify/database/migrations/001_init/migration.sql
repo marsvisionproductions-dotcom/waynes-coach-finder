@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT INTO settings (key, value) VALUES
-  ('buyer', '{"name":"Wayne","full":"Wayne Harris","company":"The Motorcoach Store","city":"Bradenton, FL","phone":"941-877-5624","email":"wayne@themotorcoachstore.com"}'),
+  ('buyer', '{"name":"Wayne","company":"The Motorcoach Store","city":"Bradenton, FL","phone":""}'),
   ('makes', '["Prevost","Newell","Foretravel","Tiffin","Newmar","Entegra"]'),
   ('min_price', '100000'),
   ('fb_radius_mi', '500')
