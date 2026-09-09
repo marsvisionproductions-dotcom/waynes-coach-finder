@@ -8,25 +8,30 @@ const API = 'https://api.apify.com/v2';
 
 export function apifyToken(): string | undefined { return process.env.APIFY_TOKEN || undefined; }
 
-export async function startFacebookRun(opts: { siteUrl: string; radiusMi?: number; minPrice?: number; daysSinceListed?: 1 | 7 | 30; maxUrls?: number }): Promise<{ runId: string; urls: number } | { skipped: string }> {
+// Two-step to keep the bill down. Step 1 ("search"): every metro × query, NO detail pages — cheap, gives title/price/city/photo/url.
+// Our ingest keeps only real coaches we haven't seen. Step 2 ("detail"): re-run ONLY the searches that produced new coaches,
+// with detail pages on and a small limit, to fill description/photos/timestamp. Typical day: step 1 ≈ $1–2, step 2 ≈ cents.
+export async function startFacebookRun(opts: { siteUrl: string; radiusMi?: number; minPrice?: number; daysSinceListed?: 1 | 7 | 30; maxUrls?: number; stage?: 'search' | 'detail'; urls?: string[] }): Promise<{ runId: string; urls: number; stage: string } | { skipped: string }> {
   const token = apifyToken();
   if (!token) return { skipped: 'APIFY_TOKEN not set' };
-  let urls = allFbSearchUrls({ radiusMi: opts.radiusMi, minPrice: opts.minPrice, daysSinceListed: opts.daysSinceListed });
+  const stage = opts.stage || 'search';
+  let urls = opts.urls || allFbSearchUrls({ radiusMi: opts.radiusMi, minPrice: opts.minPrice, daysSinceListed: opts.daysSinceListed });
   if (opts.maxUrls) urls = urls.slice(0, opts.maxUrls);
+  if (!urls.length) return { skipped: 'no urls' };
   const input = {
     startUrls: urls.map(url => ({ url })),
-    resultsLimit: 25,               // per start URL — newest-first, so 25 is plenty for a daily window
-    includeListingDetails: true,    // description, coordinates, timestamps, seller
+    resultsLimit: stage === 'search' ? +(process.env.APIFY_RESULTS_PER_URL || 15) : 10,
+    includeListingDetails: stage === 'detail',
   };
   const webhooks = [{
     eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED', 'ACTOR.RUN.TIMED_OUT', 'ACTOR.RUN.ABORTED'],
-    requestUrl: `${opts.siteUrl}/api/apify-webhook?secret=${encodeURIComponent(process.env.INGEST_SECRET || '')}`,
+    requestUrl: `${opts.siteUrl}/api/apify-webhook?secret=${encodeURIComponent(process.env.INGEST_SECRET || '')}&stage=${stage}`,
   }];
-  const q = new URLSearchParams({ token, webhooks: Buffer.from(JSON.stringify(webhooks)).toString('base64'), memory: '2048', timeout: '2400', maxTotalChargeUsd: String(process.env.APIFY_MAX_USD || '6') });
+  const q = new URLSearchParams({ token, webhooks: Buffer.from(JSON.stringify(webhooks)).toString('base64'), memory: '2048', timeout: '2400', maxTotalChargeUsd: String(stage === 'search' ? (process.env.APIFY_MAX_USD || '4') : '2') });
   const r = await fetch(`${API}/acts/${ACTOR}/runs?${q}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
   if (!r.ok) throw new Error(`Apify start failed ${r.status}: ${await r.text()}`);
   const j = await r.json() as any;
-  return { runId: j.data.id, urls: urls.length };
+  return { runId: j.data.id, urls: urls.length, stage };
 }
 
 export async function fetchDataset(datasetId: string): Promise<any[]> {
@@ -71,7 +76,7 @@ export function mapApifyItem(it: any): RawListing | null {
   const pp = photoUri(it.primaryListingPhoto || it.primary_listing_photo); if (pp) photos.push(pp);
   for (const p of (it.listingPhotos || it.listing_photos || it.photos || it.images || [])) { const u = photoUri(p); if (u) photos.push(u); }
   const ts = it.timestamp || it.listedAt || it.postedAt || it.createdAt || null;
-  const posted = it.creation_time ? new Date(it.creation_time * (it.creation_time < 1e12 ? 1000 : 1)) : (ts ? new Date(ts) : null);
+  const posted = it.creation_time ? new Date(it.creation_time * (it.creation_time < 1e12 ? 1000 : 1)) : (ts ? new Date(ts) : (/daysSinceListed=1\b/.test(it.facebookUrl || '') ? new Date(Date.now() - 12 * 3600e3) : null));
   const sellerName = it.marketplace_listing_seller?.name || it.seller?.name || it.sellerName || null;
   const isDealer = it.is_dealership || it.seller?.isDealer || /dealer/i.test(it.seller?.type || '');
   return {

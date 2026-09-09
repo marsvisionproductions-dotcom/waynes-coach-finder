@@ -40,8 +40,8 @@ export async function runAll(opts: { trigger: string; siteUrl: string; facebook?
   if (opts.facebook !== false && want('fb')) {
     try {
       const radius = await getSetting<number>('fb_radius_mi', 500);
-      const r = await startFacebookRun({ siteUrl: opts.siteUrl, radiusMi: radius, minPrice, daysSinceListed: 1 });
-      summary.sources.fb = 'skipped' in r ? { skipped: r.skipped } : { started: r.runId, urls: r.urls, note: 'results arrive by webhook when the Apify run finishes' };
+      const r = await startFacebookRun({ siteUrl: opts.siteUrl, radiusMi: radius, minPrice, daysSinceListed: 1, stage: 'search' });
+      summary.sources.fb = 'skipped' in r ? { skipped: r.skipped } : { started: r.runId, urls: r.urls, stage: r.stage, note: 'search sweep; details follow only for searches that found new coaches' };
     } catch (e: any) { summary.sources.fb = { error: e.message }; summary.errors.push(`fb: ${e.message}`); }
   }
 

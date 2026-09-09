@@ -11,7 +11,7 @@ const call = (method: string, path: string, body?: unknown) => api(new Request('
 test('migration runs and settings seeded', async () => {
   await initDb();
   const rows = await db().sql`SELECT key FROM settings ORDER BY key`;
-  assert.deepEqual(rows.map((r: any) => r.key), ['buyer', 'fb_radius_mi', 'makes', 'min_price']);
+  assert.deepEqual(rows.map((r: any) => r.key), ['buyer', 'capture_email', 'fb_radius_mi', 'makes', 'min_price']);
 });
 
 test('ingest: dealer dropped, private kept, same coach across two sources merges', async () => {
@@ -71,4 +71,40 @@ test('digest + sweep', async () => {
   // if it shows up again on a source it comes back to New
   await ingest([{ source: 'agent', external_id: 'a1', url: 'https://example.com/a1', title: '2020 Entegra Cornerstone 45B', price: 599000, location: 'Jacksonville, FL', seller_type: 'private' }]);
   const [back] = await db().sql`SELECT stage FROM listings WHERE make = 'Entegra'`; assert.equal(back.stage, 'new');
+});
+
+test('dealer weeding: repeated phone, Wayne\'s Dealer button blocklists and sweeps siblings, comps endpoint', async () => {
+  // three different coaches, same phone → the third is a lot
+  await ingest([
+    { source: 'fb', external_id: 'd1', url: 'https://www.facebook.com/marketplace/item/d1/', title: '2016 Tiffin Allegro Bus 45OPP', description: 'Call 813-555-0199', price: 259998, location: 'Tampa, FL' },
+    { source: 'fb', external_id: 'd2', url: 'https://www.facebook.com/marketplace/item/d2/', title: '2018 Tiffin Phaeton 40IH', description: 'Call 813-555-0199', price: 219998, location: 'Tampa, FL' },
+  ]);
+  const r3 = await ingest([{ source: 'fb', external_id: 'd3', url: 'https://www.facebook.com/marketplace/item/d3/', title: '2019 Tiffin Zephyr 45QZ', description: 'Call 813-555-0199', price: 379998, location: 'Tampa, FL' }]);
+  assert.equal(r3.dropped_dealer, 1, 'third listing with the same phone is a dealer');
+  // Wayne flags one of the first two as a dealer → blocklisted, sibling swept, future ones dropped
+  let r = await call('GET', '/api/listings?stage=new'); const d1 = r.json.listings.find((l: any) => /Allegro/.test(l.title_raw));
+  assert.equal(d1.seller_type, 'unknown', ',998 pricing without personal wording → unknown, still shown');
+  r = await call('PATCH', `/api/listings/${d1.id}`, { stage: 'lost', lost_reason: 'dealer' }); assert.equal(r.json.listing.seller_type, 'dealer');
+  const [{ n }] = await db().sql`SELECT count(*)::int AS n FROM listings WHERE stage = 'lost' AND lost_reason = 'dealer'`; assert.equal(n, 2, 'sibling with the same phone swept');
+  const r4 = await ingest([{ source: 'rvt', external_id: 'd4', url: 'https://www.rvt.com/d4', title: '2020 Tiffin Zephyr 45FZ', description: 'Call 813-555-0199', price: 429998, location: 'Tampa, FL', seller_type: 'private' }]);
+  assert.equal(r4.dropped_dealer, 1, 'blocklisted phone dropped even with a private hint');
+  // comps
+  await ingest([{ source: 'fb', external_id: 'c1', url: 'x1', title: '2009 Prevost H3-45 Marathon', price: 349000, location: 'Ocala, FL', seller_type: 'private', description: 'selling my coach' },
+                { source: 'fb', external_id: 'c2', url: 'x2', title: '2007 Prevost H3-45 Marathon', price: 329000, location: 'Naples, FL', seller_type: 'private', description: 'selling my coach' }]);
+  const subj = (await call('GET', '/api/listings?stage=won')).json.listings[0];
+  r = await call('GET', `/api/listings/${subj.id}/comps`); assert.equal(r.status, 200); assert.ok(r.json.count >= 2, 'comps found'); assert.ok(r.json.median >= 329000);
+});
+
+test('inbound email: BCC copy logs the send; seller reply moves to Talking', async () => {
+  const inbound = (await import('../netlify/functions/inbound-email.mts')).default;
+  const post = (body: unknown) => inbound(new Request('http://x/api/inbound-email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).then(r => r.json());
+  await db().sql`UPDATE settings SET value = '{"name":"Wayne","email":"wayne@themotorcoachstore.com"}'::jsonb WHERE key = 'buyer'`;
+  const r = await call('GET', '/api/listings?stage=new'); const x = r.json.listings[0];
+  await db().sql`UPDATE listings SET contact_email = 'seller@example.com' WHERE id = ${x.id}`;
+  let j = await post({ from: 'Wayne Harris <wayne@themotorcoachstore.com>', subject: `Your ${x.conv_year} coach (ref ${x.id})`, text: 'Hello, this is Wayne…' });
+  assert.equal(j.direction, 'sent'); let [l] = await db().sql`SELECT stage, followup_on FROM listings WHERE id = ${x.id}`; assert.equal(l.stage, 'contacted'); assert.ok(l.followup_on);
+  j = await post({ from: 'Dale <seller@example.com>', subject: `Re: Your ${x.conv_year} coach (ref ${x.id})`, text: 'Yes it is still available, call me tonight.\n\nOn Sep 9 Wayne wrote: …' });
+  assert.equal(j.direction, 'reply'); [l] = await db().sql`SELECT stage FROM listings WHERE id = ${x.id}`; assert.equal(l.stage, 'talking');
+  const ev = await db().sql`SELECT body FROM events WHERE listing_id = ${x.id} AND kind = 'reply'`; assert.match(ev[0].body, /still available/);
+  const s = await call('GET', '/api/stats'); assert.equal(s.json.replies, 1);
 });

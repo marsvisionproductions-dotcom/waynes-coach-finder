@@ -63,7 +63,7 @@ test('facebook url set covers the country', () => {
   assert.ok(METROS.length >= 14);
   const u = fbSearchUrl(METROS[0], 'prevost', { radiusMi: 500, minPrice: 100000 });
   assert.match(u, /facebook\.com\/marketplace\/miami\/search\?/); assert.match(u, /sortBy=creation_time_descend/); assert.match(u, /daysSinceListed=1/); assert.match(u, /radius=500/);
-  assert.equal(allFbSearchUrls().length, METROS.length * 8); assert.match(u, /exact=true/);
+  assert.equal(allFbSearchUrls().length, METROS.length * 6); assert.match(u, /exact=true/); assert.ok(!METROS.some(m=>m.slug==='billings'));
 });
 
 test('rvtrader alert email parses cards without fetching', async () => {
@@ -91,4 +91,9 @@ test('apify real output shape (verified run)', () => {
   const r = mapApifyItem(it)!; const n = normalize(r);
   assert.equal(n.make, 'Prevost'); assert.equal(n.converter, 'Marathon'); assert.equal(n.price, 389000); assert.equal(n.city, 'Ocala'); assert.equal(n.state, 'FL'); assert.equal(n.photos.length, 2); assert.equal(n.thumb_url, 'https://scontent.xx.fbcdn.net/p.jpg?x=1'); assert.equal(n.seller_type, 'private'); assert.ok(n.posted_at);
   assert.equal(mapApifyItem({ ...it, isSold: true }), null);
+});
+
+test('search-only apify items get a within-24h posted date from the search url', () => {
+  const r = mapApifyItem({ id: '1', itemUrl: 'https://www.facebook.com/marketplace/item/1/', listingTitle: '2010 Prevost H3-45 Liberty', listingPrice: { amount: '500000' }, locationText: { text: 'Ocala, FL' }, facebookUrl: 'https://www.facebook.com/marketplace/miami/search?query=prevost&daysSinceListed=1&exact=true' })!;
+  assert.ok(r.posted_at && (Date.now() - new Date(r.posted_at as Date).getTime()) < 24 * 3600e3);
 });

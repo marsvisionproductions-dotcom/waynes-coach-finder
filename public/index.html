@@ -143,6 +143,16 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 .ev.system .what{color:var(--ink-3)}
 .noteadd{display:flex;gap:.4rem;margin-top:.4rem}
 .noteadd input{flex:1;background:var(--panel);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:.4rem .6rem;font:inherit;font-size:.82rem}
+.comps{font-size:.82rem}
+.compsum{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.6rem}
+.compsum div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem;display:flex;flex-direction:column}
+.compsum b{font-family:"Bricolage Grotesque",sans-serif;font-size:1.05rem;color:var(--ink)}
+.compsum b.good{color:var(--good)}.compsum b.bad{color:var(--bad)}
+.compsum span{font-size:.7rem;color:var(--ink-3)}
+.complist{display:flex;flex-direction:column;gap:.25rem;max-height:14rem;overflow:auto}
+.complist a{display:grid;grid-template-columns:minmax(0,1.4fr) auto minmax(0,1fr) auto auto;gap:.5rem;align-items:center;text-decoration:none;color:var(--ink-2);font-size:.78rem;padding:.3rem .5rem;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.complist a span:first-child{color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dealerbtn{color:var(--ink-3)}.dealerbtn:hover{color:var(--bad)}
 .gallery .g{cursor:zoom-in}
 .gallery .more{position:absolute;right:.4rem;bottom:.4rem;background:rgba(15,26,36,.85);color:var(--ink);font-size:.72rem;font-weight:600;padding:.15rem .5rem;border-radius:5px}
 .gallery{position:relative}
@@ -219,7 +229,7 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 // ---------- state ----------
 const STAGES={new:'New',contacted:'Working',talking:'Talking',won:'Won',lost:'Lost'};
 const ORDER=['new','contacted','talking','won','lost'];
-const NEXT={ new:[['contacted','→ Working','good'],['lost','Pass','bad']], contacted:[['talking','They replied','good'],['lost','Lost','bad']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
+const NEXT={ new:[['contacted','→ Working','good'],['lost','Pass','bad'],['dealer','Dealer','dealer']], contacted:[['talking','They replied','good'],['lost','Lost','bad'],['dealer','Dealer','dealer']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
 const SOURCE_NAMES={fb:'Facebook Marketplace',fbgroup:'Facebook group',ebay:'eBay Motors',rvt:'RVT.com',rvtrader:'RVTrader',prevoststuff:'Prevost-Stuff',craigslist:'Craigslist',newellgurus:'NewellGurus',foreforums:'ForeForums',prevostrvforsale:'PrevostRVForSale',rvusa:'RVUSA',rvuniverse:'RVUniverse',autotrader:'Autotrader',capture:'Captured',manual:'Added by hand'};
 const ME={name:'Wayne',full:'Wayne Harris',phone:'941-877-5624',email:'wayne@themotorcoachstore.com',company:'The Motorcoach Store',city:'Bradenton, FL'};
 const S={tab:'new',open:null,q:'',makes:new Set(),srcs:new Set(),work:'all',favOnly:false,brokers:false,sort:'score',showFilters:false,tone:'text',draftText:null,draftFor:null,qr:false,stats:null,rows:[],detail:{},loading:false};
@@ -277,7 +287,7 @@ function render(){ renderSub(); renderTabs(); renderFilters(); renderView(); }
 function renderSub(){
   const st=S.stats; if(!st){document.getElementById('sub').textContent='Loading…';return;}
   const lr=st.lastRun; const when=lr?new Date(lr.started_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'never';
-  document.getElementById('sub').innerHTML=`<b>${st.fresh}</b> new since yesterday · last run <b>${when}</b>${st.due?` · <span class="due">${st.due} follow-up${st.due>1?'s':''} due</span>`:''}`;
+  document.getElementById('sub').innerHTML=`<b>${st.fresh}</b> new since yesterday · last run <b>${when}</b>${st.due?` · <span class="due">${st.due} follow-up${st.due>1?'s':''} due</span>`:''}${st.replies?` · <span class="due" style="color:var(--good)">${st.replies} seller repl${st.replies>1?'ies':'y'}</span>`:''}`;
 }
 function renderTabs(){
   const st=S.stats||{counts:{},dueBy:{}};
@@ -310,7 +320,7 @@ function renderView(){
 function rowHtml(x){
   const open=S.open===x.id; const dom=daysOn(x); const due=dueState(x);
   const reach=x.contact_phone?'☎ phone':x.contact_email?'✉ email':x.contact_url?'link':'no contact';
-  const btns=NEXT[x.stage].map(([to,label,cls])=>`<button class="btn big ${cls}" onclick="event.stopPropagation();move(${x.id},'${to}')">${label}</button>`).join('');
+  const btns=NEXT[x.stage].map(([to,label,cls])=>cls==='dealer'?`<button class="btn small ghost dealerbtn" title="This is a dealer — drop it and block this seller" onclick="event.stopPropagation();markDealer(${x.id})">${label}</button>`:`<button class="btn big ${cls}" onclick="event.stopPropagation();move(${x.id},'${to}')">${label}</button>`).join('');
   const isCapture=(x.sources||[]).some(s=>['capture','manual'].includes(s.source));
   const tag=x.stage==='new'&&dom<=1?'<span class="tag">New</span>':isCapture&&x.stage==='new'?'<span class="tag plain">Captured</span>':'';
   const duePill=due?` · <span class="pill ${due==='overdue'?'bad':due==='today'?'warn':'neutral'}">${due==='overdue'?'Follow up · overdue':due==='today'?'Follow up today':'Follow up '+fmtDay(x.followup_on)}</span>`:'';
@@ -319,7 +329,7 @@ function rowHtml(x){
   const srcChips=(x.sources||[]).map(s=>`<span class="srcbig src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
   const statusLine = x.stage==='new' ? `${domChip}${srcChips}`
     : x.stage==='contacted' ? `${x.last_event&&x.last_event.kind==='contact'?`<span class="pill good">Contacted</span> ${last}`:`<span class="pill info">Not contacted yet</span>`}${duePill} ${srcChips}` : x.stage==='talking' ? `${last}${x.our_number?` · our number <b>${money(x.our_number)}</b>`:''}${duePill}`
-    : x.stage==='won' ? `<span class="pill good">Bought ${money(x.our_number||x.price)}</span> · ${last}` : `<span class="pill bad">${x.lost_reason==='gone'?'Gone from all sources':'Passed'}</span> · ${last}`;
+    : x.stage==='won' ? `<span class="pill good">Bought ${money(x.our_number||x.price)}</span> · ${last}` : `<span class="pill bad">${x.lost_reason==='gone'?'Gone from all sources':x.lost_reason==='dealer'?'Dealer':'Passed'}</span> · ${last}`;
   const srcs=(x.sources||[]).map(s=>`<span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
   const sellerPill=x.seller_type==='broker'?' <span class="pill warn">Broker</span>':x.seller_type==='unknown'?' <span class="pill neutral" title="We could not tell from the listing">Seller ?</span>':'';
   return `<div class="row ${open?'open':''} ${x.lost_reason==='gone'?'gone':''}" id="row${x.id}">
@@ -355,8 +365,9 @@ function detailHtml(x){
         <dt>Price</dt><dd><input class="num" value="${esc(x.price?Math.round(x.price):'')}" onchange="fix(${x.id},'price',this.value)"></dd>
         <dt>City, ST</dt><dd><input value="${esc([x.city,x.state].filter(Boolean).join(', '))}" onchange="fix(${x.id},'location',this.value)"></dd>
         <dt>Posted</dt><dd>${x.posted_at?new Date(x.posted_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'unknown'} · first seen ${fmtWhen(x.first_seen_at)}</dd></dl></div>
+    <div class="sec"><h3>Price analysis <button class="btn small" onclick="priceAnalysis(${x.id})">Run on our data</button></h3><div id="comps${x.id}" class="comps"><span style="color:var(--ink-3);font-size:.8rem">Compares this coach with every similar one we've seen (asking prices, last 90 days). Nothing runs until you click.</span></div></div>
     <div class="sec"><h3>Seen on</h3><div class="srclist">${sources.map(s=>`<a href="${esc(s.url||'#')}" target="_blank" rel="noopener"><span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span><span style="color:var(--ink-3)">↗</span></a>`).join('')||'<span style="color:var(--ink-3);font-size:.8rem">—</span>'}</div></div>
-    <div class="sec"><h3>History &amp; notes</h3><div class="timeline">${events?events.map(e=>`<div class="ev ${e.kind}"><span class="when">${fmtWhen(e.at)}</span><span class="what">${e.kind==='stage'?'<b>'+esc(e.body)+'</b>':esc(e.body)}</span></div>`).join('')||'<span style="color:var(--ink-3)">No history yet</span>':'<span style="color:var(--ink-3)">Loading…</span>'}</div>
+    <div class="sec"><h3>History &amp; notes</h3><div class="timeline">${events?events.map(e=>`<div class="ev ${e.kind}"><span class="when">${fmtWhen(e.at)}</span><span class="what">${e.kind==='stage'?'<b>'+esc(e.body)+'</b>':e.kind==='reply'?'<b style="color:var(--good)">'+esc(e.body)+'</b>':esc(e.body)}</span></div>`).join('')||'<span style="color:var(--ink-3)">No history yet</span>':'<span style="color:var(--ink-3)">Loading…</span>'}</div>
       <div class="noteadd"><input id="note${x.id}" placeholder="Add a note…" onkeydown="if(event.key==='Enter')addNote(${x.id})"><button class="btn small" onclick="addNote(${x.id})">Add</button></div></div>
    </div>
    <div>
@@ -379,7 +390,7 @@ function detailHtml(x){
         ${x.contact_phone&&S.tone==='text'?`<button class="btn small ghost" onclick="S.qr=!S.qr;renderView()">${S.qr?'Hide QR':'QR'}</button>`:''}
       </div>
       ${S.qr&&x.contact_phone&&S.tone==='text'?`<div class="qrbox"><div class="qr" id="qr${x.id}"></div><div><b>At the desk?</b> Point your phone's camera at this. Messages opens with the seller's number and this text filled in.</div></div>`:''}
-      <div class="hint">Sends from ${esc(ME.name)}'s own number, so replies come straight back. Nothing goes through the app.</div>
+      <div class="hint">${S.tone==='email'?`Opens in your mail app from your own address${S.stats?.capture_email?`, with a copy BCC'd to ${esc(S.stats.capture_email)} so the send and the seller's reply land in this coach's history`:''}. Keep the (ref ${x.id}) tag in the subject.`:`Sends from ${esc(ME.name)}'s own number, so replies come straight back. Nothing goes through the app.`}</div>
     </div>`:''}
    </div>`;
 }
@@ -409,7 +420,7 @@ function draft(x,tone){
 const telDigits=p=>'+1'+String(p).replace(/\D/g,'').replace(/^1(\d{10})$/,'$1');
 function currentText(x){ return (S.draftFor===x.id&&S.draftText!=null&&S.tone==='text')?S.draftText:draft(x,'text'); }
 function smsLink(x){ return `sms:${telDigits(x.contact_phone)}?&body=${encodeURIComponent(currentText(x))}`; }
-function mailLink(x){ const e=draft(x,'email'); const [s,...b]=e.split('\n'); return `mailto:${x.contact_email}?subject=${encodeURIComponent(s.replace(/^Subject: /,''))}&body=${encodeURIComponent(b.join('\n').trim())}`; }
+function mailLink(x){ const e=(S.draftFor===x.id&&S.draftText!=null&&S.tone==='email')?S.draftText:draft(x,'email'); const [s,...b]=e.split('\n'); const subj=s.replace(/^Subject: /,'').replace(/\s*\(ref \d+\)$/,'')+` (ref ${x.id})`; const bcc=S.stats?.capture_email?`&bcc=${encodeURIComponent(S.stats.capture_email)}`:''; return `mailto:${x.contact_email}?subject=${encodeURIComponent(subj)}${bcc}&body=${encodeURIComponent(b.join('\n').trim())}`; }
 function refreshLinks(id){ const x=S.rows.find(y=>y.id===id); if(!x)return; document.querySelectorAll(`#row${id} a[href^="sms:"]`).forEach(a=>a.href=smsLink(x)); if(S.qr) drawQr(x); }
 function drawQr(x){ const el=document.getElementById('qr'+x.id); if(!el) return; if(!window.QRCode){ el.innerHTML='<div style="color:#17293A;font-size:.72rem;padding:.5rem">QR unavailable offline</div>'; return; } el.innerHTML=''; new QRCode(el,{text:smsLink(x),width:120,height:120,colorDark:'#0F1A24',colorLight:'#EDF2F6',correctLevel:QRCode.CorrectLevel.L}); }
 
@@ -419,6 +430,7 @@ function toggle(id){ S.open=S.open===id?null:id; S.draftText=null; S.qr=false; r
 async function patch(id,body){ try{ const j=await api(`/listings/${id}`,{method:'PATCH',body}); j.listing=fixIds(j.listing); const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...j.listing}; delete S.detail[id]; if(S.open===id) loadDetail(id); renderView(); return j.listing; }catch(e){ toast('Save failed: '+e.message); } }
 async function toggleFav(id){ const x=S.rows.find(y=>y.id===id); await patch(id,{favorite:!x.favorite}); }
 let last=null;
+async function markDealer(id){ const x=S.rows.find(y=>y.id===id); if(!x) return; last={id,from:x.stage,followup_on:x.followup_on}; const l=await patch(id,{stage:'lost',lost_reason:'dealer'}); if(!l) return; S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats(); toast(`${title(x)} → marked dealer${x.contact_phone||x.seller_name?' · that seller is now blocked':''}`,async()=>{ await api(`/listings/${id}`,{method:'PATCH',body:{stage:last.from}}); await refresh(); }); }
 async function move(id,to,silent){
   const x=S.rows.find(y=>y.id===id); if(!x||x.stage===to) return;
   last={id,from:x.stage,followup_on:x.followup_on};
@@ -439,6 +451,12 @@ async function fix(id,field,value){
 function copyDraft(id){const t=document.getElementById('draft'+id); try{navigator.clipboard&&navigator.clipboard.writeText(t.value);}catch(e){} toast('Copied');}
 async function runNow(){ const b=document.getElementById('runBtn'); b.disabled=true; try{ const j=await api('/run',{method:'POST',body:{facebook:false}}); toast(j.started?'Checking the free sources now — new coaches land in New over the next few minutes (Facebook runs on the 6 am schedule)':'Run did not start ('+j.status+')'); setTimeout(refresh,45000); }catch(e){ toast(e.message); } finally{ b.disabled=false; } }
 let tt; function toast(m,undo){const t=document.getElementById('toast');t.innerHTML=esc(m)+(undo?'<button id="undo">Undo</button>':'');if(undo)document.getElementById('undo').onclick=()=>{undo();t.classList.remove('show');};t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),undo?6000:2600);}
+
+// ---------- price analysis (our own data; no outside calls) ----------
+async function priceAnalysis(id){ const el=document.getElementById('comps'+id); if(!el) return; el.innerHTML='<span style="color:var(--ink-3);font-size:.8rem">Looking…</span>'; try{ const c=await api(`/listings/${id}/comps`); if(!c.count){ el.innerHTML='<span style="color:var(--ink-3);font-size:.8rem">No similar coaches seen yet — this fills in as the daily runs build history.</span>'; return; }
+  const trend=c.recent_median&&c.older_median?Math.round((c.recent_median/c.older_median-1)*100):null; const pos=c.position;
+  el.innerHTML=`<div class="compsum"><div><b class="num">${c.count}</b><span>similar seen</span></div><div><b class="num">${money(c.min)}–${money(c.max)}</b><span>asking range</span></div><div><b class="num">${money(c.median)}</b><span>median asking</span></div><div><b class="num ${pos==null?'':pos<-5?'good':pos>5?'bad':''}">${pos==null?'—':(pos>0?'+':'')+pos+'%'}</b><span>this one vs median</span></div><div><b class="num">${trend==null?'—':(trend>0?'+':'')+trend+'%'}</b><span>last 30d vs prior 60d${c.recent_n?` (${c.recent_n} vs ${c.older_n})`:''}</span></div><div><b class="num">${c.gone_n}</b><span>since gone/sold</span></div></div>
+  ${c.loose?'<div style="font-size:.72rem;color:var(--ink-3);margin-bottom:.4rem">Few same-converter matches yet, so this compares all '+esc(c.listing.make)+' coaches within 3 model years.</div>':''}<div class="complist">${c.comps.map(k=>`<a href="${esc((k.sources||[])[0]?.url||'#')}" target="_blank" rel="noopener"><span>${esc([k.conv_year,k.converter&&k.converter!==k.make?k.converter:k.make,k.model].filter(Boolean).join(' '))}</span><span>${k.mileage?Number(k.mileage).toLocaleString()+' mi':''}</span><span>${esc([k.city,k.state].filter(Boolean).join(', '))}</span><span class="num">${money(k.price)}</span><span class="pill ${k.stage==='lost'?'bad':k.stage==='won'?'good':'neutral'}">${k.stage==='lost'?'gone':k.stage}</span></a>`).join('')}</div>`; }catch(e){ el.textContent='Could not run: '+e.message; } }
 
 // ---------- photo lightbox ----------
 const LB={photos:[],i:0};

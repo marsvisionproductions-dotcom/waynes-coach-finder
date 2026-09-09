@@ -19,11 +19,10 @@ export const METROS: Metro[] = [
   { slug: 'la',            name: 'Los Angeles, CA',    lat: 34.05, lng: -118.24 },
   { slug: 'sanfrancisco',  name: 'San Francisco, CA',  lat: 37.77, lng: -122.42 },
   { slug: 'seattle',       name: 'Seattle, WA',        lat: 47.61, lng: -122.33 },
-  { slug: 'billings',      name: 'Billings, MT',       lat: 45.78, lng: -108.50 },
 ];
 
 // One query per make family. "prevost" alone catches every converter; the converter names catch titles that omit "Prevost".
-export const FB_QUERIES = ['prevost', 'newell coach', 'foretravel', 'tiffin zephyr', 'king aire', 'cornerstone', 'marathon coach', 'liberty coach'];
+export const FB_QUERIES = ['prevost', 'newell coach', 'foretravel', 'tiffin zephyr', 'newmar king aire', 'entegra cornerstone'];
 
 export function fbSearchUrl(metro: Metro, query: string, opts: { radiusMi?: number; minPrice?: number; daysSinceListed?: 1 | 7 | 30 } = {}): string {
   // exact=true: a fuzzy 'prevost' search returns every $100k+ vehicle in the area (Mercedes, Ford…). Exact keeps it to coaches.

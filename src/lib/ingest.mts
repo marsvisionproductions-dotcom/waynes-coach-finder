@@ -17,6 +17,21 @@ export async function ingest(raws: RawListing[], opts: { allowDealers?: boolean 
     if (!isRelevant(n, minPrice)) { res.dropped_irrelevant++; continue; }
     res.relevant++;
     // Private sellers are the whole point. Dealers never enter the table.
+    if (n.seller_type !== 'dealer' && !opts.allowDealers) {
+      const digits = (n.contact_phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+      const nameKey = (n.seller_name || '').trim().toLowerCase();
+      let host = ''; try { host = new URL(n.url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+      // 1. Wayne's blocklist (phone / name / host)
+      const blocked = await sql`SELECT 1 FROM dealers WHERE (${digits} <> '' AND phone = ${digits}) OR (${nameKey} <> '' AND name = ${nameKey}) OR (${host} <> '' AND host = ${host} AND host NOT IN ('facebook.com','prevost-stuff.com','prevostrvforsale.com','newellgurus.com','rvt.com','rvtrader.com','ebay.com','craigslist.org','rvusa.com')) LIMIT 1`;
+      if (blocked.length) n.seller_type = 'dealer';
+      // 2. The same phone on 2+ other coaches = a lot, not a person (private hints from surname-coded sources are kept)
+      if (n.seller_type !== 'dealer' && digits && raw.seller_type !== 'private') {
+        const [{ c }] = await sql`SELECT count(DISTINCT fingerprint)::int AS c FROM listings WHERE contact_phone IS NOT NULL AND regexp_replace(contact_phone, '\\D', '', 'g') = ${digits} AND fingerprint <> ${n.fingerprint}`;
+        if (c >= 2) n.seller_type = 'dealer';
+      }
+      // 3. Dealer-style pricing (…,995 / …,998 / …,999) with no personal wording → unknown, shown with a "Seller ?" pill
+      if (n.seller_type === 'private' && n.price && /(995|998|999)$/.test(String(Math.round(n.price))) && !/\b(my|our|we|health|downsiz|retir)\b/i.test(n.description || '')) n.seller_type = 'unknown';
+    }
     if (n.seller_type === 'dealer' && !opts.allowDealers) { res.dropped_dealer++; continue; }
 
     // 1. Already seen this exact source listing?

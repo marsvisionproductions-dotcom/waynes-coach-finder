@@ -1,6 +1,6 @@
 // Apify calls this when a Facebook run finishes. We pull the dataset and ingest it.
 import type { Config } from '@netlify/functions';
-import { fetchDataset, mapApifyItem } from '../../src/collectors/apify.mts';
+import { fetchDataset, mapApifyItem, startFacebookRun } from '../../src/collectors/apify.mts';
 import { ingest } from '../../src/lib/ingest.mts';
 import { db, initDb } from '../../src/lib/db.mts';
 
@@ -16,8 +16,18 @@ export default async (req: Request) => {
   const items = await fetchDataset(datasetId);
   const raws = items.map(mapApifyItem).filter(Boolean) as any[];
   const r = await ingest(raws);
+  const stage = url.searchParams.get('stage') || 'detail';
+  let detail: any = null;
+  if (stage === 'search' && r.ids.length) {
+    // which search URLs produced the coaches we just inserted? re-run only those, with details on
+    const newIds = new Set(r.ids.slice(-r.inserted));
+    const byId = new Map(raws.map((x: any) => [String(x.external_id), x]));
+    const seen = await import('../../src/lib/db.mts').then(async m => { await m.initDb(); return m.db().sql`SELECT external_id FROM listing_sources WHERE source = 'fb' AND listing_id = ANY(${[...newIds]})`; });
+    const searchUrls = [...new Set(seen.map((s: any) => byId.get(String(s.external_id))?.raw?.searchUrl).filter(Boolean))] as string[];
+    if (searchUrls.length) { try { detail = await startFacebookRun({ siteUrl: process.env.URL || url.origin, stage: 'detail', urls: searchUrls.slice(0, 20) }); } catch (e: any) { detail = { error: e.message }; } }
+  }
   await initDb();
-  await db().sql`INSERT INTO runs (trigger, status, finished_at, summary) VALUES ('webhook', 'ok', now(), ${JSON.stringify({ apify: { datasetId, status, items: items.length, ...r, ids: undefined } })}::jsonb)`;
+  await db().sql`INSERT INTO runs (trigger, status, finished_at, summary) VALUES ('webhook', 'ok', now(), ${JSON.stringify({ apify: { stage, datasetId, status, items: items.length, ...r, ids: undefined, detail } })}::jsonb)`;
   console.log('apify webhook', datasetId, items.length, 'items →', r.inserted, 'new');
   return new Response(JSON.stringify({ ok: true, items: items.length, inserted: r.inserted, updated: r.updated, dropped_dealer: r.dropped_dealer }), { headers: { 'content-type': 'application/json' } });
 };

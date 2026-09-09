@@ -31,8 +31,9 @@ export default async (req: Request, _ctx: Context) => {
       const [due] = await sql`SELECT count(*)::int AS n FROM listings WHERE stage IN ('contacted','talking') AND followup_on IS NOT NULL AND followup_on <= CURRENT_DATE`;
       const dueBy = await sql`SELECT stage, count(*)::int AS n FROM listings WHERE stage IN ('contacted','talking') AND followup_on IS NOT NULL AND followup_on <= CURRENT_DATE GROUP BY stage`;
       const [lastRun] = await sql`SELECT id, started_at, finished_at, status, summary FROM runs ORDER BY id DESC LIMIT 1`;
+      const [replies] = await sql`SELECT count(*)::int AS n FROM events WHERE kind = 'reply' AND at > now() - interval '3 days'`;
       const buyer = await getSetting('buyer', { name: 'Wayne' });
-      const out = json({ counts: Object.fromEntries(STAGES.map(s => [s, counts.find((c: any) => c.stage === s)?.n ?? 0])), fresh: fresh.n, due: due.n, dueBy: Object.fromEntries(dueBy.map((d: any) => [d.stage, d.n])), lastRun: lastRun ?? null, buyer });
+      const out = json({ counts: Object.fromEntries(STAGES.map(s => [s, counts.find((c: any) => c.stage === s)?.n ?? 0])), fresh: fresh.n, due: due.n, dueBy: Object.fromEntries(dueBy.map((d: any) => [d.stage, d.n])), lastRun: lastRun ?? null, buyer, replies: replies.n, capture_email: await getSetting('capture_email', '') });
       // The AIHQ portal card reads these counts cross-origin.
       const origin = req.headers.get('origin') || '';
       if (/^https:\/\/(?:[a-z0-9-]+\.)?ppitgaihq\.com$/.test(origin)) out.headers.set('access-control-allow-origin', origin);
@@ -69,6 +70,7 @@ export default async (req: Request, _ctx: Context) => {
         if (!STAGES.includes(body.stage)) return bad('bad stage');
         if (body.stage !== cur.stage) {
           stage = body.stage; lost_reason = stage === 'lost' ? (body.lost_reason || 'passed') : null;
+          if (stage === 'lost' && lost_reason === 'dealer') await blockDealer(sql, cur, id);
           if (stage === 'contacted') followup_on = body.followup_on ?? cur.followup_on ?? null;   // Working is the triage list; the follow-up clock starts on the first text/call
           else if (stage === 'talking' && cur.stage === 'contacted') followup_on = body.followup_on ?? isoPlus(2);
           else if (['won', 'lost', 'new'].includes(stage)) followup_on = null;
@@ -93,6 +95,32 @@ export default async (req: Request, _ctx: Context) => {
       if (body.contact_event) { await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, 'contact', ${String(body.contact_event).slice(0, 300)})`; if (stage === 'contacted' && !followup_on) { followup_on = isoPlus(3); await sql`UPDATE listings SET followup_on = ${followup_on} WHERE id = ${id}`; } }
       const [l] = await sql`SELECT * FROM listings WHERE id = ${id}`;
       return json({ listing: l });
+    }
+    m = path.match(/^\/listings\/(\d+)\/comps$/);
+    if (m && req.method === 'GET') {
+      // Price analysis from our own data: similar coaches we've seen (any stage), asking prices, 90-day trend. No outside calls, no tokens.
+      const id = +m[1]; const [l] = await sql`SELECT * FROM listings WHERE id = ${id}`; if (!l) return bad('not found', 404);
+      const yr = l.conv_year ?? l.shell_year ?? null;
+      const find = (sameConverter: boolean) => sql`SELECT id, conv_year, make, model, converter, price, mileage, slides, city, state, stage, first_seen_at, posted_at, seller_type, thumb_url,
+          (SELECT json_agg(json_build_object('source', s.source, 'url', s.url)) FROM listing_sources s WHERE s.listing_id = listings.id) AS sources
+        FROM listings WHERE id <> ${id} AND price IS NOT NULL AND make = ${l.make}
+          AND (${!sameConverter || !l.converter}::boolean OR converter = ${l.converter ?? null} OR converter = make)
+          AND (${yr}::int IS NULL OR conv_year BETWEEN ${(yr ?? 0) - 3} AND ${(yr ?? 0) + 3})
+        ORDER BY abs(COALESCE(conv_year, 0) - COALESCE(${yr}, 0)), first_seen_at DESC LIMIT 40`;
+      // Same converter first (a Marathon is not a Featherlite); fall back to same make ±3 years while our history is thin.
+      let comps = await find(true); let loose = false;
+      if (comps.length < 3) { comps = await find(false); loose = true; }
+      const prices = comps.map((c: any) => Number(c.price)).sort((a: number, b: number) => a - b);
+      const med = (arr: number[]) => arr.length ? (arr.length % 2 ? arr[(arr.length - 1) / 2] : (arr[arr.length / 2 - 1] + arr[arr.length / 2]) / 2) : null;
+      const now = Date.now(), d30 = now - 30 * 864e5, d90 = now - 90 * 864e5;
+      const recent = comps.filter((c: any) => new Date(c.first_seen_at).getTime() >= d30).map((c: any) => Number(c.price)).sort((a: number, b: number) => a - b);
+      const older = comps.filter((c: any) => { const t = new Date(c.first_seen_at).getTime(); return t < d30 && t >= d90; }).map((c: any) => Number(c.price)).sort((a: number, b: number) => a - b);
+      const sold = comps.filter((c: any) => c.stage === 'lost').length;
+      return json({ listing: { id: l.id, price: l.price, conv_year: yr, make: l.make, converter: l.converter, model: l.model },
+        count: comps.length, min: prices[0] ?? null, median: med(prices), max: prices[prices.length - 1] ?? null,
+        recent_median: med(recent), older_median: med(older), recent_n: recent.length, older_n: older.length, gone_n: sold,
+        position: l.price && med(prices) ? Math.round((Number(l.price) / med(prices)! - 1) * 100) : null,
+        loose, comps: comps.slice(0, 12) });
     }
     m = path.match(/^\/listings\/(\d+)\/notes$/);
     if (m && req.method === 'POST') {
@@ -174,6 +202,17 @@ export default async (req: Request, _ctx: Context) => {
   }
 };
 
+async function blockDealer(sql: any, cur: any, id: number) {
+  const digits = (cur.contact_phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  const name = (cur.seller_name || '').trim().toLowerCase();
+  if (!digits && !name) return;
+  await sql`INSERT INTO dealers (phone, name, note) VALUES (${digits || null}, ${name || null}, ${'flagged from listing ' + id})`;
+  // Same phone/name elsewhere in New or Working → out too
+  const sib = await sql`UPDATE listings SET stage = 'lost', lost_reason = 'dealer', seller_type = 'dealer', updated_at = now()
+    WHERE id <> ${id} AND stage IN ('new','contacted') AND ((${digits} <> '' AND regexp_replace(COALESCE(contact_phone,''), '\\D', '', 'g') = ${digits}) OR (${name} <> '' AND lower(COALESCE(seller_name,'')) = ${name})) RETURNING id`;
+  for (const s of sib) await sql`INSERT INTO events (listing_id, kind, body) VALUES (${s.id}, 'system', ${'Same seller as a coach Wayne marked as a dealer → Lost'})`;
+  await sql`UPDATE listings SET seller_type = 'dealer' WHERE id = ${id}`;
+}
 function isoPlus(days: number) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
 function labelOf(s: string) { return ({ new: 'New', contacted: 'Working', talking: 'Talking', won: 'Won', lost: 'Lost' } as Record<string, string>)[s] || s; }
 
