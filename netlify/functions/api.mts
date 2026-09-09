@@ -69,7 +69,7 @@ export default async (req: Request, _ctx: Context) => {
         if (!STAGES.includes(body.stage)) return bad('bad stage');
         if (body.stage !== cur.stage) {
           stage = body.stage; lost_reason = stage === 'lost' ? (body.lost_reason || 'passed') : null;
-          if (stage === 'contacted') followup_on = body.followup_on ?? isoPlus(3);
+          if (stage === 'contacted') followup_on = body.followup_on ?? cur.followup_on ?? null;   // Working is the triage list; the follow-up clock starts on the first text/call
           else if (stage === 'talking' && cur.stage === 'contacted') followup_on = body.followup_on ?? isoPlus(2);
           else if (['won', 'lost', 'new'].includes(stage)) followup_on = null;
           events.push(`stage:${labelOf(stage)}${stage === 'won' && (body.our_number ?? cur.our_number) ? ` at $${Math.round(Number(body.our_number ?? cur.our_number)).toLocaleString('en-US')}` : ''}`);
@@ -90,7 +90,7 @@ export default async (req: Request, _ctx: Context) => {
         seller_name = ${set.seller_name ?? cur.seller_name}, contact_phone = ${set.contact_phone ?? cur.contact_phone}, contact_email = ${set.contact_email ?? cur.contact_email},
         dist_mi = ${dist}, updated_at = now() WHERE id = ${id}`;
       for (const e of events) { const [kind, ...rest] = e.split(':'); await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, ${kind}, ${rest.join(':')})`; }
-      if (body.contact_event) await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, 'contact', ${String(body.contact_event).slice(0, 300)})`;
+      if (body.contact_event) { await sql`INSERT INTO events (listing_id, kind, body) VALUES (${id}, 'contact', ${String(body.contact_event).slice(0, 300)})`; if (stage === 'contacted' && !followup_on) { followup_on = isoPlus(3); await sql`UPDATE listings SET followup_on = ${followup_on} WHERE id = ${id}`; } }
       const [l] = await sql`SELECT * FROM listings WHERE id = ${id}`;
       return json({ listing: l });
     }
@@ -175,6 +175,6 @@ export default async (req: Request, _ctx: Context) => {
 };
 
 function isoPlus(days: number) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
-function labelOf(s: string) { return ({ new: 'New', contacted: 'Contacted', talking: 'Talking', won: 'Won', lost: 'Lost' } as Record<string, string>)[s] || s; }
+function labelOf(s: string) { return ({ new: 'New', contacted: 'Working', talking: 'Talking', won: 'Won', lost: 'Lost' } as Record<string, string>)[s] || s; }
 
 export const config: Config = { path: '/api/*', excludedPath: ['/api/apify-webhook', '/api/inbound-email'] };

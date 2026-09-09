@@ -40,7 +40,8 @@ test('ingest: dealer dropped, private kept, same coach across two sources merges
 test('api: stats, listings, stage moves, notes, follow-ups, corrections', async () => {
   let r = await call('GET', '/api/stats'); assert.equal(r.status, 200); assert.equal(r.json.counts.new, 1);
   r = await call('GET', '/api/listings?stage=new'); const id = r.json.listings[0].id; assert.equal(r.json.listings[0].sources.length, 2);
-  r = await call('PATCH', `/api/listings/${id}`, { stage: 'contacted' }); assert.equal(r.json.listing.stage, 'contacted'); assert.ok(r.json.listing.followup_on);
+  r = await call('PATCH', `/api/listings/${id}`, { stage: 'contacted' }); assert.equal(r.json.listing.stage, 'contacted'); assert.equal(r.json.listing.followup_on, null);
+  r = await call('PATCH', `/api/listings/${id}`, { contact_event: 'Texted from Wayne\'s phone' }); assert.ok(r.json.listing.followup_on, 'follow-up starts at first contact');
   r = await call('POST', `/api/listings/${id}/notes`, { text: 'wife handles the sale' }); assert.equal(r.json.event.kind, 'note');
   r = await call('PATCH', `/api/listings/${id}`, { stage: 'talking', our_number: '$355,000' }); assert.equal(Number(r.json.listing.our_number), 355000);
   r = await call('PATCH', `/api/listings/${id}`, { mileage: 120000, city: 'Ocala', state: 'FL', favorite: true }); assert.equal(r.json.listing.mileage, 120000); assert.equal(r.json.listing.favorite, true);

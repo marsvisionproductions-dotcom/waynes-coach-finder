@@ -82,6 +82,12 @@ select{background:var(--panel);border:1px solid var(--line-2);color:var(--ink);b
 .l1{display:flex;flex-wrap:wrap;gap:.15rem .8rem;color:var(--ink-2);font-size:.84rem}
 .l1 b{color:var(--ink);font-weight:500}
 .l2{display:flex;flex-wrap:wrap;gap:.3rem .65rem;align-items:center;font-size:.77rem;color:var(--ink-3)}
+.dom{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:.95rem;color:var(--ink);padding:.1rem .5rem;border:1px solid var(--line-2);border-radius:6px;background:var(--panel-2)}
+.dom.hot{color:var(--brass);border-color:var(--brass)}
+.dom small{font-family:"IBM Plex Sans",sans-serif;font-weight:500;font-size:.72rem;color:var(--ink-2);margin-left:.25rem}
+.srcbig{font-size:.8rem;font-weight:600;color:var(--ink-2);padding:.15rem .55rem;border-radius:6px;background:var(--panel-2);display:inline-flex;align-items:center;gap:.35rem}
+.srcbig i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.workbar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
 .l2 b{color:var(--ink-2);font-weight:500}
 .pill{display:inline-block;font-size:.66rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:.1rem .48rem;border-radius:999px;line-height:1.6;white-space:nowrap}
 .pill.good{background:var(--good-bg);color:var(--good)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.info{background:var(--info-bg);color:var(--info)}.pill.neutral{background:var(--panel-2);color:var(--ink-2)}
@@ -155,7 +161,7 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 .toast button{background:var(--brass);color:var(--brass-ink);padding:.2rem .55rem;border-radius:5px;font-size:.76rem;font-weight:600}
 .modal{position:fixed;inset:0;background:rgba(15,26,36,.7);display:none;align-items:center;justify-content:center;z-index:30;padding:1rem}
 .modal.open{display:flex}
-.modal .box{background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:1.25rem;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal .box{background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:1.25rem;max-width:640px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
 .modal h2{font-size:1.15rem;margin-bottom:.6rem}
 .modal p{color:var(--ink-2);font-size:.86rem;margin:.4rem 0}
 .modal .bm{display:inline-block;padding:.5rem .9rem;background:var(--brass);color:var(--brass-ink);border-radius:8px;font-weight:600;text-decoration:none;cursor:grab}
@@ -164,6 +170,10 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 .modal textarea{min-height:80px}
 .modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
 .modal .acts{justify-content:flex-end;margin-top:.9rem}
+.srcgrid{display:flex;flex-direction:column;gap:.4rem;max-height:60vh;overflow:auto}
+.srcrow{display:grid;grid-template-columns:150px 1fr auto;gap:.6rem;font-size:.8rem;color:var(--ink-2);align-items:start;padding:.4rem 0;border-bottom:1px solid var(--line)}
+.srcrow b{color:var(--ink);font-weight:600}
+.srcrow .mono{color:var(--ink-3);font-size:.74rem;white-space:nowrap}
 .skeleton{height:96px;border-radius:var(--r);background:linear-gradient(90deg,var(--panel),var(--panel-2),var(--panel));background-size:200% 100%;animation:sh 1.2s infinite}
 @keyframes sh{0%{background-position:0 0}100%{background-position:-200% 0}}
 @media (max-width:760px){
@@ -207,12 +217,12 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 // ---------- state ----------
-const STAGES={new:'New',contacted:'Contacted',talking:'Talking',won:'Won',lost:'Lost'};
+const STAGES={new:'New',contacted:'Working',talking:'Talking',won:'Won',lost:'Lost'};
 const ORDER=['new','contacted','talking','won','lost'];
-const NEXT={ new:[['contacted','Contacted','good'],['lost','Lost','bad']], contacted:[['talking','They replied','good'],['lost','Lost','bad']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
+const NEXT={ new:[['contacted','→ Working','good'],['lost','Pass','bad']], contacted:[['talking','They replied','good'],['lost','Lost','bad']], talking:[['won','Won','primary'],['lost','Lost','bad']], won:[['talking','Reopen','']], lost:[['new','Back to New','']] };
 const SOURCE_NAMES={fb:'Facebook Marketplace',fbgroup:'Facebook group',ebay:'eBay Motors',rvt:'RVT.com',rvtrader:'RVTrader',prevoststuff:'Prevost-Stuff',craigslist:'Craigslist',newellgurus:'NewellGurus',foreforums:'ForeForums',prevostrvforsale:'PrevostRVForSale',rvusa:'RVUSA',rvuniverse:'RVUniverse',autotrader:'Autotrader',capture:'Captured',manual:'Added by hand'};
 const ME={name:'Wayne',full:'Wayne Harris',phone:'941-877-5624',email:'wayne@themotorcoachstore.com',company:'The Motorcoach Store',city:'Bradenton, FL'};
-const S={tab:'new',open:null,q:'',makes:new Set(),favOnly:false,brokers:false,sort:'score',showFilters:false,tone:'text',draftText:null,draftFor:null,qr:false,stats:null,rows:[],detail:{},loading:false};
+const S={tab:'new',open:null,q:'',makes:new Set(),srcs:new Set(),work:'all',favOnly:false,brokers:false,sort:'score',showFilters:false,tone:'text',draftText:null,draftFor:null,qr:false,stats:null,rows:[],detail:{},loading:false};
 
 // ---------- api ----------
 async function api(path,opts={}){
@@ -246,13 +256,16 @@ const cdn=(u,w)=>`/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&fit=cover
 // Try the Image CDN first (resized, cached); if that host isn't allowed fall back to the original; if that fails, a placeholder.
 const photo=(u,seed,w=480)=>u?`<img src="${cdn(u,w)}" data-orig="${esc(u)}" alt="" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=this.dataset.orig}else{this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:coachSvg(${seed})}).firstChild)}">`:coachSvg(seed);
 
+const srcName=x=>{const s=(x.sources||[])[0]?.source; return s?(SOURCE_NAMES[s]||s):'';};
 // ---------- filtering (client-side within the stage) ----------
 function visible(){
   let a=S.rows.slice();
   if(S.makes.size) a=a.filter(x=>S.makes.has(x.make));
+  if(S.srcs.size) a=a.filter(x=>(x.sources||[]).some(s=>S.srcs.has(s.source)));
+  if(S.tab==='contacted'&&S.work!=='all'){ a=a.filter(x=>{ const c=!!(x.last_event&&x.last_event.kind==='contact'); const d=dueState(x); return S.work==='todo'?!c:S.work==='done'?c:['overdue','today'].includes(d); }); }
   if(S.favOnly) a=a.filter(x=>x.favorite);
   if(S.q){const q=S.q.toLowerCase(); a=a.filter(x=>[x.make,x.model,x.converter,x.city,x.state,x.seller_name,x.title_raw].join(' ').toLowerCase().includes(q));}
-  const f={score:(p,q)=>(q.score||0)-(p.score||0),newest:(p,q)=>postedDate(q)-postedDate(p),price:(p,q)=>(p.price??1e12)-(q.price??1e12),dist:(p,q)=>(p.dist_mi??1e9)-(q.dist_mi??1e9)}[S.sort];
+  const f={score:(p,q)=>(q.score||0)-(p.score||0),newest:(p,q)=>postedDate(q)-postedDate(p),dom:(p,q)=>daysOn(q)-daysOn(p),price:(p,q)=>(p.price??1e12)-(q.price??1e12),pricedesc:(p,q)=>(q.price??-1)-(p.price??-1),miles:(p,q)=>(p.mileage??1e12)-(q.mileage??1e12),milesdesc:(p,q)=>(q.mileage??-1)-(p.mileage??-1),dist:(p,q)=>(p.dist_mi??1e9)-(q.dist_mi??1e9),source:(p,q)=>srcName(p).localeCompare(srcName(q))||(q.score||0)-(p.score||0)}[S.sort];
   a.sort(f);
   if(['contacted','talking'].includes(S.tab)){ const rank=x=>({overdue:0,today:1,later:2}[dueState(x)]??3); a.sort((p,q)=>rank(p)-rank(q)); }
   if(S.tab==='new') a.sort((p,q)=>(q.favorite?1:0)-(p.favorite?1:0));
@@ -274,10 +287,13 @@ function renderFilters(){
   const makes=['Prevost','Newell','Foretravel','Tiffin','Newmar','Entegra'];
   document.getElementById('filterbar').innerHTML=`
     <input type="search" placeholder="Search model, converter, city, seller…" value="${esc(S.q)}" oninput="S.q=this.value;renderView()">
-    <select onchange="S.sort=this.value;renderView()" aria-label="Sort"><option value="score" ${S.sort==='score'?'selected':''}>Best first</option><option value="newest" ${S.sort==='newest'?'selected':''}>Newest</option><option value="price" ${S.sort==='price'?'selected':''}>Price</option><option value="dist" ${S.sort==='dist'?'selected':''}>Closest</option></select>
-    <button class="btn small ${S.showFilters||S.makes.size||S.favOnly||S.brokers?'primary':''}" onclick="S.showFilters=!S.showFilters;renderFilters()">Filters${S.makes.size?' · '+S.makes.size:''}${S.favOnly?' · ★':''}</button>
+    <select onchange="S.sort=this.value;renderView()" aria-label="Sort">${[['score','Best first'],['newest','Newest'],['dom','Days on market · longest'],['pricedesc','Price · high → low'],['price','Price · low → high'],['milesdesc','Mileage · high → low'],['miles','Mileage · low → high'],['dist','Closest to Bradenton'],['source','By source']].map(([v,n])=>`<option value="${v}" ${S.sort===v?'selected':''}>${n}</option>`).join('')}</select>
+    <button class="btn small ${S.showFilters||S.makes.size||S.srcs.size||S.favOnly||S.brokers?'primary':''}" onclick="S.showFilters=!S.showFilters;renderFilters()">Filters${(S.makes.size+S.srcs.size)?' · '+(S.makes.size+S.srcs.size):''}${S.favOnly?' · ★':''}</button>
+    <button class="btn small ghost" onclick="openModal('sources')" title="What we check every morning">ⓘ Sources</button>
     <div class="chips ${S.showFilters?'open':''}">
       ${makes.map(m=>`<button class="chip ${S.makes.has(m)?'on':''}" onclick="S.makes.has('${m}')?S.makes.delete('${m}'):S.makes.add('${m}');renderFilters();renderView()">${m}</button>`).join('')}
+      <span style="width:100%;height:0"></span>
+      ${[...new Set(S.rows.flatMap(x=>(x.sources||[]).map(s=>s.source)))].sort().map(s=>`<button class="chip ${S.srcs.has(s)?'on':''}" onclick="S.srcs.has('${s}')?S.srcs.delete('${s}'):S.srcs.add('${s}');renderFilters();renderView()"><span class="src ${s}"><i></i>${SOURCE_NAMES[s]||s}</span></button>`).join('')}
       <button class="chip ${S.favOnly?'on':''}" onclick="S.favOnly=!S.favOnly;renderFilters();renderView()">★ Favorites only</button>
       <button class="chip ${S.brokers?'on':''}" onclick="S.brokers=!S.brokers;renderFilters();loadRows()" title="Private owners always; dealers never">${S.brokers?'✓ ':''}Include brokers</button>
     </div>`;
@@ -286,8 +302,9 @@ function renderView(){
   const v=document.getElementById('view');
   if(S.loading&&!S.rows.length){v.innerHTML='<div class="skeleton"></div><div class="skeleton" style="margin-top:.5rem"></div>';return;}
   const rows=visible();
-  const emptyMsg={new:'Inbox is clear. The next run is at 6:00 am.',contacted:'Nothing waiting on a reply.',talking:'No live conversations.',won:'No coaches bought yet.',lost:'Nothing here.'}[S.tab];
-  v.innerHTML=rows.length?`<div class="list">${rows.map(rowHtml).join('')}</div>`:`<div class="empty">${emptyMsg}</div>`;
+  const emptyMsg={new:'Inbox is clear. The next run is at 6:00 am.',contacted:'Nothing in Working. Go through New and move the ones worth a call here.',talking:'No live conversations.',won:'No coaches bought yet.',lost:'Nothing here.'}[S.tab];
+  const workBar=S.tab==='contacted'?`<div class="workbar">${[['all','All'],['todo','Not contacted yet'],['done','Contacted'],['due','Follow-up due']].map(([k,n])=>`<button class="chip ${S.work===k?'on':''}" onclick="S.work='${k}';renderView()">${n}</button>`).join('')}</div>`:'';
+  v.innerHTML=workBar+(rows.length?`<div class="list">${rows.map(rowHtml).join('')}</div>`:`<div class="empty">${emptyMsg}</div>`);
   if(S.open&&S.qr){const x=S.rows.find(r=>r.id===S.open); if(x) drawQr(x);}
 }
 function rowHtml(x){
@@ -298,8 +315,10 @@ function rowHtml(x){
   const tag=x.stage==='new'&&dom<=1?'<span class="tag">New</span>':isCapture&&x.stage==='new'?'<span class="tag plain">Captured</span>':'';
   const duePill=due?` · <span class="pill ${due==='overdue'?'bad':due==='today'?'warn':'neutral'}">${due==='overdue'?'Follow up · overdue':due==='today'?'Follow up today':'Follow up '+fmtDay(x.followup_on)}</span>`:'';
   const last=x.last_event?`${esc(x.last_event.body)} · ${fmtDay(x.last_event.at)}`:'';
-  const statusLine = x.stage==='new' ? (x.posted_at ? `Posted <b>${ago(x)}</b> · <b class="num">${dom}</b> day${dom===1?'':'s'} on market` : `Found <b>${ago(x)}</b> · listing date unknown`)
-    : x.stage==='contacted' ? `${last}${duePill}` : x.stage==='talking' ? `${last}${x.our_number?` · our number <b>${money(x.our_number)}</b>`:''}${duePill}`
+  const domChip = x.posted_at ? `<span class="dom ${dom<=2?'hot':''}">${dom===0?'Today':dom+' day'+(dom===1?'':'s')}<small>on market</small></span>` : `<span class="dom">${ago(x)}<small>found · date unknown</small></span>`;
+  const srcChips=(x.sources||[]).map(s=>`<span class="srcbig src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
+  const statusLine = x.stage==='new' ? `${domChip}${srcChips}`
+    : x.stage==='contacted' ? `${x.last_event&&x.last_event.kind==='contact'?`<span class="pill good">Contacted</span> ${last}`:`<span class="pill info">Not contacted yet</span>`}${duePill} ${srcChips}` : x.stage==='talking' ? `${last}${x.our_number?` · our number <b>${money(x.our_number)}</b>`:''}${duePill}`
     : x.stage==='won' ? `<span class="pill good">Bought ${money(x.our_number||x.price)}</span> · ${last}` : `<span class="pill bad">${x.lost_reason==='gone'?'Gone from all sources':'Passed'}</span> · ${last}`;
   const srcs=(x.sources||[]).map(s=>`<span class="src ${s.source}"><i></i>${SOURCE_NAMES[s.source]||s.source}</span>`).join('');
   const sellerPill=x.seller_type==='broker'?' <span class="pill warn">Broker</span>':x.seller_type==='unknown'?' <span class="pill neutral" title="We could not tell from the listing">Seller ?</span>':'';
@@ -309,7 +328,7 @@ function rowHtml(x){
       <div class="body">
         <div class="title">${esc(title(x))||esc(x.title_raw||'Untitled coach')}${sellerPill}</div>
         <div class="l1">${x.mileage?`<span><b class="num">${Number(x.mileage).toLocaleString()}</b> mi</span>`:''}${x.slides!=null?`<span><b class="num">${x.slides}</b> slide${x.slides===1?'':'s'}</span>`:''}<span>${esc([x.city,x.state].filter(Boolean).join(', ')||'Location unknown')}${x.dist_mi!=null?` · <b class="num">${Number(x.dist_mi).toLocaleString()}</b> mi`:''}</span><span>${esc(x.seller_name||'Seller')} · ${reach}</span></div>
-        <div class="l2">${statusLine}${x.stage==='new'?srcs:''}</div>
+        <div class="l2">${statusLine}</div>
       </div>
       <div class="side">
         <div class="price num">${money(x.price)||'<span style="color:var(--ink-3);font-size:.9rem">no price</span>'}</div>
@@ -349,7 +368,7 @@ function detailHtml(x){
       <div class="note">${/facebook/.test(x.contact_url||'')&&!x.contact_phone?'Facebook listings don\'t show phone or email — message from your own account.':'Only what the listing shows publicly is stored. Calls and texts go from your own phone.'}</div>
     </div></div>
     ${['contacted','talking'].includes(x.stage)?`<div class="sec"><h3>Follow-up</h3><div class="followup">Remind me on <input type="date" value="${x.followup_on?String(x.followup_on).slice(0,10):''}" onchange="patch(${x.id},{followup_on:this.value||null})">${x.stage==='talking'?`<span>Our number <input type="text" class="num" style="width:110px" value="${x.our_number?money(x.our_number):''}" placeholder="$" onchange="patch(${x.id},{our_number:this.value})"></span>`:''}</div></div>`:''}
-    ${showDraft?`<div class="sec"><h3>${x.stage==='new'?'First message':'Follow-up message'}</h3>
+    ${showDraft?`<div class="sec"><h3>${(x.stage==='new'||!(x.last_event&&x.last_event.kind==='contact'))?'First message':'Follow-up message'}</h3>
       <div class="tones">${[['text','Text'],['email','Email'],['voice','Voicemail']].map(([k,n])=>`<button class="${S.tone===k?'on':''}" onclick="S.tone='${k}';S.draftText=null;renderView()">${n}</button>`).join('')}</div>
       <textarea id="draft${x.id}" oninput="S.draftText=this.value;S.draftFor=${x.id};refreshLinks(${x.id})">${esc(S.draftText!=null&&S.draftFor===x.id?S.draftText:draft(x,S.tone))}</textarea>
       <div class="draftacts">
@@ -377,7 +396,8 @@ function draft(x,tone){
   const phone=ME.phone||'941-877-5624', email=ME.email||'wayne@themotorcoachstore.com';
   // Wayne's own opener, word for word, with the coach named so it reads like a person wrote it.
   const body=`${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'} in ${ME.city||'Bradenton, FL'}. ${saw} We specialize in buying High-Quality Class A coaches like yours. We purchase on the wholesale market for our inventory. If you’d ever consider a private, easy sale without listing hassles, I’d love to talk. Please feel free to call ${phone} or email ${email}`;
-  if(x.stage==='contacted'){
+  const contactedAlready = x.stage==='contacted' && !!(x.last_event&&x.last_event.kind==='contact');
+  if(contactedAlready){
     if(tone==='text') return `${hello.replace('this is','')}${ME.name||'Wayne'} again from ${ME.company||'The Motorcoach Store'}. Still interested in your ${coach} if it’s available — happy to make a private, easy offer this week. Feel free to call ${phone}. ${sig.replace('\n',' ')}`;
     if(tone==='email') return `Subject: Following up on your ${coach}\n\n${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'}, following up on my note about your ${coach}. If it’s still available I’d like to make you a straightforward wholesale cash offer — we handle the title work and pickup. Please feel free to call ${phone} or email ${email}\n\n${sig}`;
     return `${hello} ${ME.name||'Wayne'} at ${ME.company||'The Motorcoach Store'} in ${ME.city||'Bradenton, FL'}, following up on your ${coach}. Still very interested and can make a private, easy offer this week. Please call me back at ${phone}. Thank you.`;
@@ -406,7 +426,7 @@ async function move(id,to,silent){
   S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats();
   if(!silent) toast(`${title(x)} → ${STAGES[to]}`,async()=>{ await api(`/listings/${last.id}`,{method:'PATCH',body:{stage:last.from,followup_on:last.followup_on}}); await refresh(); });
 }
-async function logged(id,what){ const x=S.rows.find(y=>y.id===id); if(!x)return; if(x.stage==='new'){ await api(`/listings/${id}`,{method:'PATCH',body:{stage:'contacted',contact_event:`${what} from ${ME.name}'s phone`}}); S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats(); toast(`${what} · moved to Contacted`); } else { await api(`/listings/${id}`,{method:'PATCH',body:{contact_event:`${what} from ${ME.name}'s phone`}}); delete S.detail[id]; loadDetail(id); } }
+async function logged(id,what){ const x=S.rows.find(y=>y.id===id); if(!x)return; if(x.stage==='new'){ await api(`/listings/${id}`,{method:'PATCH',body:{stage:'contacted',contact_event:`${what} from ${ME.name}'s phone`}}); S.rows=S.rows.filter(r=>r.id!==id); S.open=null; renderView(); loadStats(); toast(`${what} · moved to Working`); } else { const j=await api(`/listings/${id}`,{method:'PATCH',body:{contact_event:`${what} from ${ME.name}'s phone`}}); const i=S.rows.findIndex(r=>r.id===id); if(i>=0) S.rows[i]={...S.rows[i],...fixIds(j.listing),last_event:{kind:'contact',body:`${what} from ${ME.name}'s phone`,at:new Date().toISOString()}}; delete S.detail[id]; await loadDetail(id); loadStats(); toast(`${what} — logged`); } }
 async function addNote(id){ const i=document.getElementById('note'+id); if(!i||!i.value.trim())return; try{ await api(`/listings/${id}/notes`,{method:'POST',body:{text:i.value.trim()}}); delete S.detail[id]; await loadDetail(id); }catch(e){ toast(e.message); } }
 async function fix(id,field,value){
   const body={};
@@ -439,6 +459,9 @@ function openModal(kind){
     <label>Listing link</label><input id="capUrl" placeholder="https://www.facebook.com/marketplace/item/…">
     <label>Anything the page won't show us (optional: title, price, city, seller, phone)</label><textarea id="capNotes" placeholder="2008 Marathon H3-45, $389,000, Ocala FL, Dale 352-555-0147"></textarea>
     <div class="acts"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="captureUrl()">Capture</button></div>`;
+  else if(kind==='sources'){ const lr=S.stats?.lastRun; const src=lr?.summary?.sources||{}; const when=lr?new Date(lr.started_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+    const rows=[['fb','Facebook Marketplace','16 metros × 500 mi, newest first, private posts. Runs on the 6 am schedule via Apify (≈ $1–5/run).',src.fb],['prevoststuff','Prevost-Stuff','Owner ads only (dealers/converters dropped). Daily list-page check + photo/phone pull.',src.prevoststuff],['prevostrvforsale','PrevostRVForSale','Re-posts of owner coaches found on Facebook. RSS + page pull.',src.feeds],['newellgurus','NewellGurus','Owner "Coaches for Sale" board. RSS.',src.feeds],['foreforums','ForeForums','Foretravel owners forum. RSS (currently blocked — members-only classifieds).',src.feeds],['ebay','eBay Motors','Official API, private classified ads. Needs eBay keys.',src.ebay],['rvtrader','RVTrader','Private-seller alert emails (RVTrader blocks bots). Needs the alert mailbox.',src.rvtrader],['craigslist','Craigslist','Saved-search alert emails. Needs the alert mailbox.',null],['rvusa','RVUSA','Sitemap check (currently blocked).',src.rvusa]];
+    box.innerHTML=`<h2>What we check</h2><p>Last run ${when}. Dealers are dropped before anything reaches this list.</p><div class="srcgrid">${rows.map(([k,n,d,r])=>`<div class="srcrow"><span class="src ${k}"><i></i><b>${n}</b></span><span>${d}</span><span class="mono">${r?(r.skipped?'off':r.error?'error':(r.found??r.started?'ok':'—')+(r.found!=null?` · ${r.found} found`:'')+(r.inserted?` · ${r.inserted} new`:'')):'—'}</span></div>`).join('')}</div><div class="acts"><button class="btn" onclick="closeModal()">Close</button></div>`; }
   else box.innerHTML=`<h2>Add a coach by hand</h2>
     <p>For a coach you heard about by phone, at a rally, or anywhere without a link.</p>
     <label>Title</label><input id="mTitle" placeholder="2008 Prevost H3-45 Marathon, 2 slides, 118k">
