@@ -108,3 +108,15 @@ test('inbound email: BCC copy logs the send; seller reply moves to Talking', asy
   const ev = await db().sql`SELECT body FROM events WHERE listing_id = ${x.id} AND kind = 'reply'`; assert.match(ev[0].body, /still available/);
   const s = await call('GET', '/api/stats'); assert.equal(s.json.replies, 1);
 });
+
+test('inbound email: Resend Inbound webhook fetches the body by id', async () => {
+  const inbound = (await import('../netlify/functions/inbound-email.mts')).default;
+  const realFetch = globalThis.fetch; const calls: string[] = [];
+  process.env.RESEND_API_KEY = 're_test';
+  globalThis.fetch = (async (url: any, init?: any) => { calls.push(String(url)); if (String(url).includes('/emails/receiving/')) return new Response(JSON.stringify({ id: 'abc', from: 'seller@example.com', headers: { from: 'Dale <seller@example.com>' }, subject: 'Re: coach (ref 999999)', text: 'still here', html: '' }), { headers: { 'content-type': 'application/json' } }); return realFetch(url, init); }) as any;
+  try {
+    const j = await inbound(new Request('http://x/api/inbound-email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'email.received', data: { email_id: 'abc' } }) })).then(r => r.json());
+    assert.ok(calls.some(c => c.includes('/emails/receiving/abc')));
+    assert.equal(j.ok, true); // ref 999999 doesn't exist → falls through to alert parsing (no urls) → ok
+  } finally { globalThis.fetch = realFetch; delete process.env.RESEND_API_KEY; }
+});

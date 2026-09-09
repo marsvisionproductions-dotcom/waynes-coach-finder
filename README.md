@@ -32,7 +32,7 @@ The one contract every collector speaks is `RawListing` in `src/lib/schema.mts`.
 | `APIFY_TOKEN` | Facebook Marketplace | apify.com → Settings → Integrations. Actor `apify/facebook-marketplace-scraper` ($5 / 1k results, $5 free/mo) |
 | `APIFY_ACTOR_ID` | optional | default `apify~facebook-marketplace-scraper` |
 | `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | eBay Motors | developer.ebay.com → create app → production keyset. 5,000 calls/day free |
-| `RESEND_API_KEY`, `DIGEST_TO`, `DIGEST_FROM` | morning email | resend.com (3,000 emails/mo free). `DIGEST_FROM` needs a verified domain, or use `onboarding@resend.dev` to test |
+| `RESEND_API_KEY`, `DIGEST_TO`, `DIGEST_FROM`, `FORWARD_TO` | morning email; inbound mail; where unrecognised inbound mail is forwarded | resend.com (3,000 emails/mo free). `DIGEST_FROM` needs a verified domain, or use `onboarding@resend.dev` to test |
 | `SCRAPER_PROXY_URL` | RVTrader search pages | optional. A vendor unlocker endpoint with `{url}` placeholder, e.g. `https://api.scraperapi.com?api_key=KEY&url={url}` |
 | `URL` | set by Netlify | used for webhook callbacks |
 
@@ -53,6 +53,9 @@ Netlify can't receive mail, so a mail-receiving service forwards it as a webhook
 1. **Resend inbound** (same account as the digest): add the domain, create an address like `leads@themotorcoachstore.com`, point its webhook at
    `https://waynes-coach-finder.netlify.app/api/inbound-email?secret=<INGEST_SECRET>`.
 2. **Cloudflare Email Routing** (if the domain's DNS is on Cloudflare): route `leads@` to a tiny Worker that POSTs `{from, subject, text}` to the same URL.
+
+Resend Inbound's webhook carries only an id; the endpoint fetches the body from Resend's API (so `RESEND_API_KEY` must be set). Anything
+that is neither a coach conversation nor a listing alert (e.g. RVTrader's "confirm your saved search" email) is forwarded to `FORWARD_TO`.
 
 Then set the address once: `PATCH /api/settings {"capture_email":"leads@…"}` (header `x-ingest-secret`). From then on the **Open in Mail** button BCCs that
 address and tags the subject with `(ref 123)`. Wayne's own copy logs "Emailed" on the coach; when the seller replies (they reply-all, or Wayne
