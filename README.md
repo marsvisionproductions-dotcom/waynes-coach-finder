@@ -13,7 +13,7 @@ Live: https://waynes-coach-finder.netlify.app · Netlify project: `waynes-coach-
                                     ├─ Prevost-Stuff list page   (open robots, 1 fetch/day)
                                     ├─ RVUSA sitemap lastmod     (open robots)
                                     ├─ RVTrader search           (only via SCRAPER_PROXY_URL; alert emails otherwise)
-                                    └─ Facebook Marketplace      (Apify actor, logged-out, 16 metros × 500 mi → webhook)
+                                    └─ Facebook Marketplace      (Apify actor, logged-out, 15 metros × 500 mi → webhook)
             ingest: normalize → dedupe (source id, then cross-source fingerprint) → drop dealers → score → rows + events
             sweep: New coaches unseen for 3 days → Lost (gone); if they reappear they come back to New
             digest: Resend email, best-first, plus follow-ups due

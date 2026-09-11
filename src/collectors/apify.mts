@@ -20,7 +20,7 @@ export async function startFacebookRun(opts: { siteUrl: string; radiusMi?: numbe
   if (!urls.length) return { skipped: 'no urls' };
   const input = {
     startUrls: urls.map(url => ({ url })),
-    resultsLimit: stage === 'search' ? +(process.env.APIFY_RESULTS_PER_URL || 15) : 10,
+    resultsLimit: stage === 'search' ? +(process.env.APIFY_RESULTS_PER_URL || 15) : +(process.env.APIFY_DETAIL_PER_URL || 25),   // detail re-walks a search; FB's order shifts, so go deeper than the search pass
     includeListingDetails: stage === 'detail',
   };
   const webhooks = [{

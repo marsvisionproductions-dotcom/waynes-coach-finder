@@ -1,5 +1,5 @@
 // Facebook Marketplace search is location-bound with a 500-mile maximum radius.
-// These 16 seeds at 500 mi cover the continental US (plus a little overlap so nothing falls in a seam).
+// These 15 seeds at 500 mi cover the continental US (plus a little overlap so nothing falls in a seam).
 // Slugs are Facebook's own location slugs: https://www.facebook.com/marketplace/<slug>/search?...
 export interface Metro { slug: string; name: string; lat: number; lng: number }
 

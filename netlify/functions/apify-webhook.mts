@@ -22,7 +22,8 @@ export default async (req: Request) => {
     // which search URLs produced the coaches we just inserted? re-run only those, with details on
     const newIds = new Set(r.ids.slice(-r.inserted));
     const byId = new Map(raws.map((x: any) => [String(x.external_id), x]));
-    const seen = await import('../../src/lib/db.mts').then(async m => { await m.initDb(); return m.db().sql`SELECT external_id FROM listing_sources WHERE source = 'fb' AND listing_id = ANY(${[...newIds]})`; });
+    // …plus any Facebook coach still missing its photos from an earlier day, so nobody stays a grey placeholder
+    const seen = await import('../../src/lib/db.mts').then(async m => { await m.initDb(); return m.db().sql`SELECT s.external_id FROM listing_sources s JOIN listings l ON l.id = s.listing_id WHERE s.source = 'fb' AND (s.listing_id = ANY(${[...newIds]}) OR (l.stage = 'new' AND l.thumb_url IS NULL))`; });
     const searchUrls = [...new Set(seen.map((s: any) => byId.get(String(s.external_id))?.raw?.searchUrl).filter(Boolean))] as string[];
     if (searchUrls.length) { try { detail = await startFacebookRun({ siteUrl: process.env.URL || url.origin, stage: 'detail', urls: searchUrls.slice(0, 20) }); } catch (e: any) { detail = { error: e.message }; } }
   }

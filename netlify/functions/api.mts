@@ -101,7 +101,7 @@ export default async (req: Request, _ctx: Context) => {
       // Price analysis from our own data: similar coaches we've seen (any stage), asking prices, 90-day trend. No outside calls, no tokens.
       const id = +m[1]; const [l] = await sql`SELECT * FROM listings WHERE id = ${id}`; if (!l) return bad('not found', 404);
       const yr = l.conv_year ?? l.shell_year ?? null;
-      const find = (sameConverter: boolean) => sql`SELECT id, conv_year, make, model, converter, price, mileage, slides, city, state, stage, first_seen_at, posted_at, seller_type, thumb_url,
+      const find = (sameConverter: boolean) => sql`SELECT id, conv_year, make, model, converter, price, mileage, slides, city, state, stage, lost_reason, first_seen_at, posted_at, seller_type, thumb_url,
           (SELECT json_agg(json_build_object('source', s.source, 'url', s.url)) FROM listing_sources s WHERE s.listing_id = listings.id) AS sources
         FROM listings WHERE id <> ${id} AND price IS NOT NULL AND make = ${l.make}
           AND (${!sameConverter || !l.converter}::boolean OR converter = ${l.converter ?? null} OR converter = make)
@@ -115,7 +115,7 @@ export default async (req: Request, _ctx: Context) => {
       const now = Date.now(), d30 = now - 30 * 864e5, d90 = now - 90 * 864e5;
       const recent = comps.filter((c: any) => new Date(c.first_seen_at).getTime() >= d30).map((c: any) => Number(c.price)).sort((a: number, b: number) => a - b);
       const older = comps.filter((c: any) => { const t = new Date(c.first_seen_at).getTime(); return t < d30 && t >= d90; }).map((c: any) => Number(c.price)).sort((a: number, b: number) => a - b);
-      const sold = comps.filter((c: any) => c.stage === 'lost').length;
+      const sold = comps.filter((c: any) => c.stage === 'lost' && c.lost_reason === 'gone').length;
       return json({ listing: { id: l.id, price: l.price, conv_year: yr, make: l.make, converter: l.converter, model: l.model },
         count: comps.length, min: prices[0] ?? null, median: med(prices), max: prices[prices.length - 1] ?? null,
         recent_median: med(recent), older_median: med(older), recent_n: recent.length, older_n: older.length, gone_n: sold,

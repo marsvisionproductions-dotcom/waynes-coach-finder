@@ -43,7 +43,9 @@ export function extractFromHtml(url: string, html: string, hints: Partial<RawLis
   const prod = ld.find(x => /Product|Vehicle|Car|Offer/i.test(String(x['@type'])));
   const offer = prod?.offers && (Array.isArray(prod.offers) ? prod.offers[0] : prod.offers);
   const title = hints.title || prod?.name || meta(html, 'og:title') || decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').trim();
-  const desc = hints.description || prod?.description || meta(html, 'og:description') || meta(html, 'description') || '';
+  let desc = hints.description || prod?.description || meta(html, 'og:description') || meta(html, 'description') || '';
+  // Site-wide taglines that some listing pages put in their meta description (Prevost-Stuff's header line, etc.)
+  desc = desc.replace(/^\s*The Largest Selection of Prevost Coaches For Sale ANYWHERE\s*/i, '').trim();
   const price = hints.price ?? offer?.price ?? meta(html, 'product:price:amount') ?? (desc.match(/\$\s?[\d,]{5,}/)?.[0]) ?? (title.match(/\$\s?[\d,]{5,}/)?.[0]) ?? null;
   let images = [meta(html, 'og:image'), ...(Array.isArray(prod?.image) ? prod.image : prod?.image ? [prod.image] : [])].filter(Boolean) as string[];
   images = images.map(u => absUrl(u, url));
