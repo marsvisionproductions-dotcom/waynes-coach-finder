@@ -192,7 +192,7 @@ textarea{width:100%;background:var(--panel);border:1px solid var(--line-2);color
   .side{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;min-width:0}
   .row.open .detail{grid-template-columns:1fr}
   .btn.big{min-width:0;padding:.5rem .8rem}
-  .side .acts{flex-wrap:wrap;justify-content:flex-end}
+  .side{flex-wrap:wrap;row-gap:.5rem}.side .acts{flex:1 1 100%;justify-content:flex-end;order:3}.side .acts .btn.big{flex:1 1 auto}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
